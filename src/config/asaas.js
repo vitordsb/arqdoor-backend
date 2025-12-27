@@ -1,0 +1,30 @@
+const axios = require("axios");
+
+const DEFAULT_BASE_URL = "https://www.asaas.com/api/v3";
+const DEFAULT_TIMEOUT = 15000;
+
+const asaasClient = axios.create({
+  baseURL: process.env.ASAAS_BASE_URL || DEFAULT_BASE_URL,
+  timeout: Number(process.env.ASAAS_TIMEOUT_MS) || DEFAULT_TIMEOUT,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+asaasClient.interceptors.request.use((config) => {
+  const apiKey = process.env.ASAAS_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "ASAAS_API_KEY não configurado. Defina a variável de ambiente para usar a integração."
+    );
+  }
+
+  config.headers["access_token"] = apiKey;
+  config.headers["User-Agent"] =
+    process.env.ASAAS_USER_AGENT || "ArqDoorApp-Payments";
+
+  return config;
+});
+
+module.exports = asaasClient;

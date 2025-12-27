@@ -1,0 +1,37 @@
+const { Router } = require("express");
+const router = Router();
+const routerUser = require("./routerUser");
+const routerAuth = require("./routerAuth");
+const routerProvider = require("./routerProvider");
+const routerDemand = require("./routerDemand");
+const routerServiceFreelancer = require("./routerServiceFreelancer");
+const routerUpload = require("./routerUpload");
+const routerPortfolio = require("./routerPortfolio");
+const routerConversation = require("./routerConversations");
+const routerMessage = require("./routerMessage");
+const routerLocationUser = require("./routerLocationUser");
+const routerTicket = require("./routerTicket");
+const routerStep = require("./routerStep");
+const routerAttchment = require("./routerAttchment");
+const routerStepFeedback = require("./routerStepFeedback");
+const routerPayment = require("./routerPayment");
+const routerAdmin = require("./routerAdmin");
+
+router.use("/users", routerUser);
+router.use("/auth", routerAuth);
+router.use("/providers", routerProvider);
+router.use("/demands", routerDemand);
+router.use("/servicesfreelancer", routerServiceFreelancer);
+router.use("/upload", routerUpload);
+router.use("/portfolio", routerPortfolio);
+router.use("/conversation", routerConversation);
+router.use("/message", routerMessage);
+router.use("/locationuser", routerLocationUser);
+router.use("/ticket", routerTicket);
+router.use("/step", routerStep);
+router.use("/attchment", routerAttchment);
+router.use("/stepfeedback", routerStepFeedback);
+router.use("/payments", routerPayment);
+router.use("/admin", routerAdmin);
+
+module.exports = router;

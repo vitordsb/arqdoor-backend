@@ -1,0 +1,34 @@
+const db = require("../database/config");
+const { DataTypes } = require("sequelize");
+const Conversation = require("./Conversation");
+const User = require("./User");
+
+const Message = db.define("Message", {
+  message_id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  conversation_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Conversation,
+      key: "conversation_id",
+    },
+  },
+  sender_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: User,
+      key: "id",
+    },
+  },
+  content: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+});
+
+module.exports = Message;

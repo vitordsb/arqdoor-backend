@@ -1,0 +1,27 @@
+const getOneDemandService = require("../../services/demand/getOneDemandService");
+
+
+const getOneDemandController = async (req, res) => {
+  try {
+    const demand = await getOneDemandService(req.params.id, req.user);
+
+    return res.status(demand.code).json(demand);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      code: 500,
+      error: {
+        details: [
+          {
+            controller: "DemandController",
+            message: "Erro interno",
+          },
+        ],
+      },
+      message: "Erro no DemandGetOneController",
+      success: false,
+    });
+  }
+};
+
+module.exports = getOneDemandController;
