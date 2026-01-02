@@ -6,6 +6,28 @@ const https = require("https");
 const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 8080;
+app.use(express.json());
+
+app.post("/webhook/deploy", (req, res) => {
+  const token = req.headers["x-deploy-token"];
+
+  if (!token || token !== process.env.DEPLOY_TOKEN) {
+    return res.status(403).send("Forbidden");
+  }
+
+  exec("/var/www/arqdoor-backend/deploy.sh", (error, stdout, stderr) => {
+    if (error) {
+      console.error("Deploy error:", error);
+      console.error(stderr);
+      return res.status(500).send("Deploy failed");
+    }
+
+    console.log(stdout);
+    if (stderr) console.error(stderr);
+    return res.send("Deploy OK");
+  });
+});
+
 
 const valENV = require("./utils/valEnv");
 const sequelize = require("./database/config");
@@ -21,7 +43,6 @@ app.use(
   })
 );
 
-app.use(express.json());
 
 const raizDoProjeto = path.join(__dirname, "..");
 const uploadsDir = path.join(raizDoProjeto, "uploads");

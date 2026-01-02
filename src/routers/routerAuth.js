@@ -5,6 +5,8 @@ const createUserValidation = require("../middlewares/validators/users/createUser
 const loginUserController = require("../controllers/auth/loginUserController");
 const registerUserController = require("../controllers/auth/registerUserController");
 const loginUserValidator = require("../middlewares/validators/auth/loginUserValidator");
+const googleAuthController = require("../controllers/auth/googleAuthController");
+const googleAuthValidator = require("../middlewares/validators/auth/googleAuthValidator");
 // const loginUserValidator = require("../middlewares/validators/auth/LoginUserValidator");
 
 const router = Router();
@@ -76,5 +78,6 @@ router.post("/register", createUserValidation, registerUserController);
  */
 
 router.post("/login", loginUserValidator, loginUserController);
+router.post("/google", googleAuthValidator, googleAuthController);
 
 module.exports = router;
