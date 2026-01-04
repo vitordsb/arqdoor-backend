@@ -1,2 +1,5 @@
-node_modules
+# src/SSL/*.key
+# src/SSL/*.crt
+# src/SSL/*.csr
 .env
+node_modules/
