@@ -2,7 +2,19 @@ const getAllLocationUserService = require("../../services/locationUser/getAllLoc
 
 const getAllLocationUserController = async (req, res) => {
   try {
-    const location = await getAllLocationUserService(req.query.user_id);
+    const requestedUserId = req.query.user_id;
+    const tokenUserId = req.user?.id;
+
+    if (requestedUserId && Number(requestedUserId) !== Number(tokenUserId)) {
+      return res.status(403).json({
+        code: 403,
+        message: "Acesso negado",
+        success: false,
+      });
+    }
+
+    const targetUserId = requestedUserId || tokenUserId;
+    const location = await getAllLocationUserService(targetUserId);
     return res.status(location.code).json(location);
   } catch (error) {
     console.error(error);

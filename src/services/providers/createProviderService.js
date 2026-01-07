@@ -37,24 +37,24 @@ const createProviderService = async (dataProvider) => {
       };
     }
     // Validar se esse usuario já não esta na lista
-    if (ServiceProvider.findOne({ where: { user_id: dataProvider.user_id } })) {
+    const existingProvider = await ServiceProvider.findOne({
+      where: { user_id: dataProvider.user_id },
+    });
+    if (existingProvider) {
       return {
-        code: 400,
-        error: {
-          details: [
-            {
-              field: "id_user",
-              message: "O usuario já esta na lista",
-            },
-          ],
-        },
-        message: "Erro ao criar provider",
-        success: false,
+        code: 200,
+        provider: existingProvider,
+        message: "Prestador já existe",
+        success: true,
       };
     }
 
-    // criar
-    const provider = await ServiceProvider.create(dataProvider);
+    // criar com profession padrão se não vier do request
+    const providerPayload = {
+      ...dataProvider,
+      profession: dataProvider.profession ?? "",
+    };
+    const provider = await ServiceProvider.create(providerPayload);
 
     return {
       code: 201,

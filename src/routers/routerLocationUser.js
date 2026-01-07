@@ -63,7 +63,7 @@ router.post(
  *                 $ref: '#/components/schemas/LocationUser'
  */
 
-router.get("/", getAllLocationUserController);
+router.get("/", authToken, getAllLocationUserController);
 
 /**
  * @swagger
@@ -89,7 +89,7 @@ router.get("/", getAllLocationUserController);
  *         description: Localização do usuário não encontrada
  */
 
-router.get("/:id", getOneLocationUserController);
+router.get("/:id", authToken, getOneLocationUserController);
 
 /**
  * @swagger

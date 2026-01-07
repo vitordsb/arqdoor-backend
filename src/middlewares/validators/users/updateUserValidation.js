@@ -13,6 +13,7 @@ const updateUserValidation = async (req, res, next) => {
       birth,
       gender,
       type,
+      perfil_completo,
     } = req.body || {};
 
     const schema = Joi.object({
@@ -30,6 +31,7 @@ const updateUserValidation = async (req, res, next) => {
       type: Joi.string().valid("contratante", "prestador"), // exemplos de valores
       gender: Joi.string().valid("Masculino", "Feminino", "Prefiro não dizer"),
       birth: Joi.date().less("now"), // precisa ser antes da data atual
+      perfil_completo: Joi.boolean(),
     });
 
     const { error, value } = schema.validate({
@@ -41,6 +43,7 @@ const updateUserValidation = async (req, res, next) => {
       type,
       gender,
       birth,
+      perfil_completo,
     });
 
     if (error) {
