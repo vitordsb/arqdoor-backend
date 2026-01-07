@@ -16,6 +16,7 @@ const routerAttchment = require("./routerAttchment");
 const routerStepFeedback = require("./routerStepFeedback");
 const routerPayment = require("./routerPayment");
 const routerAdmin = require("./routerAdmin");
+const routerInvites = require("./routerInvites");
 
 router.use("/users", routerUser);
 router.use("/auth", routerAuth);
@@ -33,5 +34,6 @@ router.use("/attchment", routerAttchment);
 router.use("/stepfeedback", routerStepFeedback);
 router.use("/payments", routerPayment);
 router.use("/admin", routerAdmin);
+router.use("/invites", routerInvites);
 
 module.exports = router;
