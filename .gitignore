@@ -3,3 +3,4 @@
 # src/SSL/*.csr
 .env
 node_modules/
+frontend_testes/

@@ -1,128 +1,136 @@
-const dayjs = require("dayjs");
-const asaasClient = require("../../config/asaas");
-const Payment = require("../../models/Payment");
+﻿const Payment = require("../../models/Payment");
 const TicketService = require("../../models/TicketService");
-const Message = require("../../models/Message");
 const Step = require("../../models/Step");
+const PaymentStep = require("../../models/PaymentStep");
+const asaasClient = require("../../config/asaas");
+const { Op } = require("sequelize");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
+const refreshStepFinancialClearanceService = require("./refreshStepFinancialClearanceService");
 
 const refreshTicketPaymentService = async (ticketId, user) => {
   try {
-    const payment = await Payment.findOne({
-      where: { ticket_id: ticketId },
-      order: [["created_at", "DESC"]],
-    });
-
-    if (!payment) {
+    const ticket = await TicketService.findByPk(ticketId);
+    if (!ticket) {
       return {
         code: 404,
         success: false,
-        message: "Nenhum pagamento associado a este ticket.",
+        message: "Ticket nÃ£o encontrado.",
       };
     }
 
-    // garante que usuário pertence ao ticket (prestador ou contratante)
-    if (
-      user.type !== "contratante" &&
-      user.type !== "prestador"
-    ) {
+    const allPayments = await Payment.findAll({
+      where: {
+        ticket_id: ticketId,
+      },
+    });
+
+    if (!allPayments || allPayments.length === 0) {
       return {
-        code: 403,
-        success: false,
-        message: "Usuário sem permissão para consultar este pagamento.",
+        code: 200,
+        success: true,
+        message: "NÃ£o hÃ¡ pagamentos vinculados a este ticket.",
+        data: [],
       };
     }
+    const updatedPayments = [];
+    const asaasBaseUrl = asaasClient?.defaults?.baseURL;
 
-    const asaaspaymentId = payment.asaas_payment_id;
-    if (!asaaspaymentId) {
-      return {
-        code: 400,
-        success: false,
-        message: "Pagamento não possui referência no Asaas.",
-      };
-    }
+    // Iterar e consultar o gateway (Asaas)
+    for (const payment of allPayments) {
+      if (!payment.asaas_payment_id) continue;
 
-    const asaaspayment = await asaasClient.get(`/payments/${asaaspaymentId}`);
-    const data = asaaspayment.data || {};
+      try {
+        console.log(`[Refresh Service] Consultando Asaas (${asaasBaseUrl}) para pagamento ${payment.id} (${payment.asaas_payment_id})`);
+        const response = await asaasClient.get(`/payments/${payment.asaas_payment_id}`);
 
-    const updateData = {
-      status: data.status || payment.status,
-      last_event: data.status || payment.last_event,
-      raw_response: JSON.stringify(data),
-    };
+        const asaasData = response.data;
+        let statusChanged = false;
 
-    if (data.paymentDate || data.clientPaymentDate) {
-      const paidDate = data.clientPaymentDate || data.paymentDate;
-      updateData.paid_at = dayjs(paidDate).toDate();
-    }
+        // Se o status mudou, atualiza no banco
+        if (asaasData.status) {
+          const previousStatus = payment.status;
 
-    if (data.dueDate) {
-      updateData.due_date = dayjs(data.dueDate).toDate();
-    }
+          payment.status = asaasData.status;
 
-    const wasPaid = isPaidStatus(payment.status);
-    await payment.update(updateData);
-
-    const paid = isPaidStatus(updateData.status);
-    if (paid && !wasPaid) {
-      if (payment.step_id) {
-        try {
-          const paidStep = await Step.findByPk(payment.step_id);
-          if (paidStep) {
-            await paidStep.update({
-              status: "Concluido",
-              confirm_contractor: true,
-            });
+          if (isPaidStatus(asaasData.status)) {
+            if (!payment.paid_at && asaasData.paymentDate) {
+              payment.paid_at = asaasData.paymentDate;
+            }
           }
-        } catch (e) {
-          console.warn("Falha ao marcar etapa como concluída após refresh de pagamento", e);
+
+          await payment.save();
+          console.log(`[Refresh Service] Status do pagamento ${payment.id} atualizado para ${payment.status}`);
+
+          if (previousStatus !== payment.status) {
+            updatedPayments.push(payment);
+          }
         }
-      }
 
-      const isDeposit = (payment.description || "")
-        .toLowerCase()
-        .includes("depósito em garantia");
-      if (isDeposit) {
-        try {
-          await TicketService.update(
-            { status: "em andamento", payment: true },
-            { where: { id: ticketId } }
-          );
+        if (isPaidStatus(payment.status)) {
+          const stepIdsToUpdate = [];
 
-          try {
-            const ticket = await TicketService.findByPk(ticketId);
-            if (ticket?.conversation_id) {
-              const senderId = payment.contractor_id || payment.provider_id;
-              if (senderId) {
-                await Message.create({
-                  conversation_id: ticket.conversation_id,
-                  sender_id: senderId,
-                  content: `💰 Pagamento do depósito em garantia confirmado para o Ticket #${ticketId}. Projeto liberado.`,
-                });
+          // pagamento individual
+          if (payment.step_id) {
+            stepIdsToUpdate.push(payment.step_id);
+          }
+
+          // pagamento agrupado
+          const linkedSteps = await PaymentStep.findAll({
+            where: { payment_id: payment.id },
+          });
+          linkedSteps.forEach((ls) => stepIdsToUpdate.push(ls.step_id));
+
+          if (stepIdsToUpdate.length > 0) {
+            console.log(`[Refresh Service] Avaliando liberacao financeira para etapas: ${stepIdsToUpdate.join(", ")}`);
+            await refreshStepFinancialClearanceService(stepIdsToUpdate, {
+              logger: console.log,
+            });
+          } else {
+            await TicketService.update({ payment: true }, { where: { id: ticketId } });
+          }
+        } else {
+          const stepIdsToCheck = [];
+          if (payment.step_id) stepIdsToCheck.push(payment.step_id);
+
+          const linkedSteps = await PaymentStep.findAll({ where: { payment_id: payment.id } });
+          linkedSteps.forEach((ls) => stepIdsToCheck.push(ls.step_id));
+
+          if (stepIdsToCheck.length > 0) {
+            const countCleared = await Step.count({
+              where: {
+                id: { [Op.in]: stepIdsToCheck },
+                is_financially_cleared: true,
+              },
+            });
+
+            if (countCleared > 0 && payment.status !== "CANCELLED") {
+              payment.status = "CANCELLED";
+              await payment.save();
+              if (!updatedPayments.find((p) => p.id === payment.id)) {
+                updatedPayments.push(payment);
               }
             }
-          } catch (e) {
-            console.warn("Falha ao enviar mensagem de pagamento confirmado (refresh)", e);
           }
-        } catch (e) {
-          console.warn("Falha ao atualizar ticket após refresh de pagamento", e);
         }
+
+      } catch (err) {
+        const errorStatus = err?.response?.status;
+        const errorData = err?.response?.data;
+        console.error(
+          `Erro ao consultar Asaas para pagamento ${payment.id}:`,
+          errorStatus ? `status=${errorStatus}` : "",
+          errorData || err.message
+        );
       }
     }
 
     return {
       code: 200,
       success: true,
-      message: paid ? "Pagamento confirmado" : "Pagamento ainda pendente",
-      data: {
-        paid,
-        status: updateData.status,
-        payment_id: payment.id,
-        asaas_payment_id: payment.asaas_payment_id,
-      },
+      message: "Status dos pagamentos atualizados com sucesso.",
+      data: updatedPayments,
     };
   } catch (error) {
-    console.error(error);
     throw new Error(error.message);
   }
 };

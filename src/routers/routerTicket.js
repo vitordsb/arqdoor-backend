@@ -10,6 +10,7 @@ const deleteTicketController = require("../controllers/ticketService/deleteTicke
 const getProviderActiveTicketsController = require("../controllers/ticketService/getProviderActiveTicketsController");
 const updateSignatureTicketValidator = require("../middlewares/validators/step/updateSignatureStepValidator");
 const updateSignatureTicketController = require("../controllers/step/updateSignatureStepController");
+const getTicketStepsController = require("../controllers/ticketService/getTicketStepsController");
 const router = Router();
 
 /**
@@ -176,6 +177,8 @@ router.patch("/:id", authToken, updateTicketValidator, updateTicketController);
  */
 router.delete("/:id", authToken, deleteTicketController);
 
+// router.get("/tickets/:id/steps", authToken, getTicketStepsController); 
+router.get("/:id/steps", authToken, getTicketStepsController);
 
 
 

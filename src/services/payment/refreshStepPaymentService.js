@@ -3,14 +3,37 @@ const asaasClient = require("../../config/asaas");
 const Payment = require("../../models/Payment");
 const TicketService = require("../../models/TicketService");
 const Step = require("../../models/Step");
+const PaymentStep = require("../../models/PaymentStep");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
+const refreshStepFinancialClearanceService = require("./refreshStepFinancialClearanceService");
+const { Op } = require("sequelize");
 
 const refreshStepPaymentService = async (stepId, user) => {
   try {
-    const payments = await Payment.findAll({
+    // 1. Buscar pagamentos diretos (individuais)
+    const directPayments = await Payment.findAll({
       where: { step_id: stepId },
       order: [["created_at", "DESC"]],
     });
+
+    // 2. Buscar pagamentos agrupados (via PaymentStep)
+    const paymentSteps = await PaymentStep.findAll({
+      where: { step_id: stepId },
+    });
+    const groupedPaymentIds = paymentSteps.map((ps) => ps.payment_id);
+    
+    let groupedPayments = [];
+    if (groupedPaymentIds.length > 0) {
+      groupedPayments = await Payment.findAll({
+        where: { id: { [Op.in]: groupedPaymentIds } },
+        order: [["created_at", "DESC"]],
+      });
+    }
+
+    // Combinar e ordenar por data de criação (mais recente primeiro)
+    const payments = [...directPayments, ...groupedPayments].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
     if (!payments || payments.length === 0) {
       return {
@@ -29,51 +52,66 @@ const refreshStepPaymentService = async (stepId, user) => {
       };
     }
 
+    const asaasBaseUrl = asaasClient?.defaults?.baseURL;
+
     let paidPayment = payments.find((p) => isPaidStatus(p.status));
+    let stepIdsForRefresh = [stepId];
 
-    // Se nenhum pago encontrado, sincroniza o mais recente pendente
-    let targetPayment = paidPayment || payments[0];
-
+    // Se não encontrou pagamento pago localmente, verifica todos os pendentes no Asaas
+    // (O cliente pode ter pago uma tentativa anterior, não necessariamente a última)
     if (!paidPayment) {
-      const asaaspaymentId = targetPayment.asaas_payment_id;
-      if (!asaaspaymentId) {
-        return {
-          code: 400,
-          success: false,
-          message: "Pagamento não possui referência no Asaas.",
-        };
-      }
+      const pendingPayments = payments.filter((p) => !isPaidStatus(p.status));
 
-      const asaaspayment = await asaasClient.get(`/payments/${asaaspaymentId}`);
-      const data = asaaspayment.data || {};
+      for (const payment of pendingPayments) {
+        if (!payment.asaas_payment_id) continue;
 
-      const updateData = {
-        status: data.status || targetPayment.status,
-        last_event: data.status || targetPayment.last_event,
-        raw_response: JSON.stringify(data),
-      };
+        try {
+          console.log(`[Refresh Step] Consultando Asaas (${asaasBaseUrl}) para pagamento ${payment.id} (${payment.asaas_payment_id})`);
+          const response = await asaasClient.get(`/payments/${payment.asaas_payment_id}`);
+          const data = response.data || {};
 
-      if (data.paymentDate || data.clientPaymentDate) {
-        const paidDate = data.clientPaymentDate || data.paymentDate;
-        updateData.paid_at = dayjs(paidDate).toDate();
-      }
+          const updateData = {
+            status: data.status || payment.status,
+            last_event: data.status || payment.last_event,
+            raw_response: JSON.stringify(data),
+          };
 
-      if (data.dueDate) {
-        updateData.due_date = dayjs(data.dueDate).toDate();
-      }
+          if (data.paymentDate || data.clientPaymentDate) {
+            const paidDate = data.clientPaymentDate || data.paymentDate;
+            updateData.paid_at = dayjs(paidDate).toDate();
+          }
 
-      const wasPaid = isPaidStatus(targetPayment.status);
-      await targetPayment.update(updateData);
+          if (data.dueDate) {
+            updateData.due_date = dayjs(data.dueDate).toDate();
+          }
 
-      if (isPaidStatus(updateData.status)) {
-        paidPayment = targetPayment;
+          await payment.update(updateData);
+
+          // Se encontrou um pagamento pago, atualiza a variável e para o loop
+          if (isPaidStatus(updateData.status)) {
+            paidPayment = payment;
+            break;
+          }
+        } catch (err) {
+          const errorStatus = err?.response?.status;
+          const errorData = err?.response?.data;
+          console.warn(
+            `Erro ao atualizar pagamento ${payment.id} no Asaas:`,
+            errorStatus ? `status=${errorStatus}` : "",
+            errorData || err.message
+          );
+        }
       }
     }
 
     const paid = !!paidPayment && isPaidStatus(paidPayment.status);
 
     if (paid && paidPayment) {
+      const stepIdsToUpdate = [];
+
+      // Caso 1: Pagamento Individual (Legado)
       if (paidPayment.step_id) {
+        stepIdsToUpdate.push(paidPayment.step_id);
         try {
           const paidStep = await Step.findByPk(paidPayment.step_id);
           if (paidStep) {
@@ -86,6 +124,16 @@ const refreshStepPaymentService = async (stepId, user) => {
           console.warn("Falha ao marcar etapa como concluída após refresh de pagamento", e);
         }
       }
+      // Caso 2: Pagamento Agrupado
+      else {
+        const linkedSteps = await PaymentStep.findAll({ where: { payment_id: paidPayment.id } });
+        linkedSteps.forEach((ls) => stepIdsToUpdate.push(ls.step_id));
+      }
+
+      if (stepIdsToUpdate.length > 0) {
+        stepIdsForRefresh = stepIdsToUpdate;
+      }
+
       if (paidPayment.ticket_id) {
         try {
           const steps = await Step.findAll({ where: { ticket_id: paidPayment.ticket_id } });
@@ -103,6 +151,10 @@ const refreshStepPaymentService = async (stepId, user) => {
         }
       }
     }
+
+    await refreshStepFinancialClearanceService(stepIdsForRefresh, {
+      logger: console.log,
+    });
 
     const statusToReturn = paidPayment ? paidPayment.status : (payments[0]?.status || "PENDING");
 

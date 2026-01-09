@@ -16,6 +16,11 @@ const routerAttchment = require("./routerAttchment");
 const routerStepFeedback = require("./routerStepFeedback");
 const routerPayment = require("./routerPayment");
 const routerAdmin = require("./routerAdmin");
+const ticketRoutes = require("./routerTicket");
+const authToken = require("../middlewares/validators/authToken");
+const stepIdParamValidator = require("../middlewares/validators/payment/stepIdParamValidator");
+const confirmStepPaymentController = require("../controllers/step/confirmStepPaymentController");
+
 
 router.use("/users", routerUser);
 router.use("/auth", routerAuth);
@@ -28,10 +33,18 @@ router.use("/conversation", routerConversation);
 router.use("/message", routerMessage);
 router.use("/locationuser", routerLocationUser);
 router.use("/ticket", routerTicket);
+router.use("/tickets", ticketRoutes); //testando para corrigir o step em branco
 router.use("/step", routerStep);
 router.use("/attchment", routerAttchment);
 router.use("/stepfeedback", routerStepFeedback);
 router.use("/payments", routerPayment);
 router.use("/admin", routerAdmin);
+
+router.post(
+  "/steps/:stepId/confirm-payment",
+  authToken,
+  stepIdParamValidator,
+  confirmStepPaymentController
+);
 
 module.exports = router;

@@ -2,15 +2,15 @@ const Joi = require("joi");
 
 const updateTicketValidator = async (req, res, next) => {
   try {
-    const { status } = req.body || {};
+    const { status, allow_grouped_payment } = req.body || {};
 
     const schema = Joi.object({
       status: Joi.string()
-        .regex(/pendente|em andamento|concluída|cancelada/)
-        .required(),
+        .regex(/pendente|em andamento|concluída|cancelada/),
+      allow_grouped_payment: Joi.boolean(),
     });
 
-    const { error, value } = schema.validate({ status });
+    const { error, value } = schema.validate({ status, allow_grouped_payment });
 
     if (error) {
       return res.status(400).json({

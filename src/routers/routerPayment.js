@@ -1,5 +1,7 @@
 const { Router } = require("express");
 const createStepPaymentController = require("../controllers/payment/createStepPaymentController");
+const createGroupedPaymentController = require("../controllers/payment/createGroupedPaymentController");
+const createPaymentController = require("../controllers/payment/createPaymentController");
 const createTicketDepositPaymentController = require("../controllers/payment/createTicketDepositPaymentController");
 const getStepPaymentsController = require("../controllers/payment/getStepPaymentsController");
 const handleAsaasWebhookController = require("../controllers/payment/handleAsaasWebhookController");
@@ -18,6 +20,37 @@ const router = Router();
  *   name: Payments
  *   description: Operações relacionadas aos pagamentos das etapas
  */
+
+/**
+ * @swagger
+ * /payments:
+ *   post:
+ *     summary: Cria uma cobrança (individual ou agrupada)
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               step_id:
+ *                 type: integer
+ *                 description: ID da etapa (para pagamento individual)
+ *               step_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: IDs das etapas (para pagamento agrupado)
+ *     responses:
+ *       201:
+ *         description: Cobrança criada com sucesso
+ *       400:
+ *         description: Dados inválidos
+ */
+router.post("/", authToken, createPaymentController);
 
 /**
  * @swagger
@@ -60,6 +93,37 @@ router.post(
   stepIdParamValidator,
   createStepPaymentValidator,
   createStepPaymentController
+);
+
+/**
+ * @swagger
+ * /payments/grouped:
+ *   post:
+ *     summary: Gera uma cobrança única para múltiplas etapas
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               step_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       201:
+ *         description: Cobrança agrupada criada com sucesso
+ *       400:
+ *         description: Erro de validação ou agrupamento não permitido
+ */
+router.post(
+  "/grouped",
+  authToken,
+  createGroupedPaymentController
 );
 
 /**

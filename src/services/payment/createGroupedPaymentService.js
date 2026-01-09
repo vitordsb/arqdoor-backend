@@ -1,0 +1,155 @@
+const Step = require("../../models/Step");
+const TicketService = require("../../models/TicketService");
+const Payment = require("../../models/Payment");
+const PaymentStep = require("../../models/PaymentStep");
+const PaymentCustomer = require("../../models/PaymentCustomer");
+const asaasClient = require("../../config/asaas");
+const { Op } = require("sequelize");
+
+const createGroupedPaymentService = async (stepIds, user, options = {}) => {
+  try {
+    if (!stepIds || !Array.isArray(stepIds) || stepIds.length === 0) {
+      return {
+        code: 400,
+        success: false,
+        message: "É necessário fornecer um array de IDs das etapas.",
+      };
+    }
+
+    const steps = await Step.findAll({
+      where: {
+        id: {
+          [Op.in]: stepIds,
+        },
+      },
+    });
+
+    if (steps.length !== stepIds.length) {
+      return {
+        code: 404,
+        success: false,
+        message: "Uma ou mais etapas não foram encontradas.",
+      };
+    }
+
+    const ticketId = steps[0].ticket_id;
+    const allSameTicket = steps.every((step) => step.ticket_id === ticketId);
+
+    if (!allSameTicket) {
+      return {
+        code: 400,
+        success: false,
+        message: "Todas as etapas devem pertencer ao mesmo ticket.",
+      };
+    }
+
+    const ticket = await TicketService.findByPk(ticketId);
+    if (!ticket) {
+      return { code: 404, success: false, message: "Ticket não encontrado." };
+    }
+
+    if (!ticket.allow_grouped_payment && steps.length > 1) {
+      return {
+        code: 403,
+        success: false,
+        message: "O pagamento agrupado não está habilitado para este serviço.",
+      };
+    }
+
+    const alreadyPaid = steps.some((step) => step.is_financially_cleared);
+    if (alreadyPaid) {
+      return {
+        code: 400,
+        success: false,
+        message: "Uma ou mais etapas selecionadas já foram pagas.",
+      };
+    }
+
+    const totalAmount = steps.reduce((sum, step) => sum + Number(step.price), 0);
+
+    const paymentCustomer = await PaymentCustomer.findOne({ where: { user_id: user.id } });
+
+    if (!paymentCustomer || !paymentCustomer.asaas_customer_id) {
+      return {
+        code: 400,
+        success: false,
+        message: "Cliente não possui cadastro no Asaas. Verifique se o CPF/CNPJ está cadastrado.",
+      };
+    }
+
+    const { method = "PIX", description } = options;
+
+    const paymentPayload = {
+      customer: paymentCustomer.asaas_customer_id,
+      billingType: method,
+      value: totalAmount,
+      dueDate: new Date().toISOString().split("T")[0], // Vence hoje
+      description: description || `Pagamento referente a ${steps.length} etapas do Ticket #${ticketId}`,
+    };
+
+    const asaasResponse = await asaasClient.post("/payments", paymentPayload);
+
+    const asaasData = asaasResponse.data;
+
+    const newPayment = await Payment.create({
+      ticket_id: ticketId,
+      contractor_id: user.id,
+      provider_id: ticket.provider_id,
+      amount: totalAmount,
+      method: method,
+      status: asaasData.status,
+      asaas_payment_id: asaasData.id,
+      asaas_invoice_url: asaasData.invoiceUrl,
+      pix_payload: asaasData.pixQrCodeField,    });
+
+    const paymentStepsData = steps.map((step) => ({
+      payment_id: newPayment.id,
+      step_id: step.id,
+    }));
+
+    await PaymentStep.bulkCreate(paymentStepsData);
+
+    if (method === "PIX") {
+      try {
+        const qrResponse = await asaasClient.get(`/payments/${asaasData.id}/pixQrCode`);
+        newPayment.pix_payload = qrResponse.data.payload;
+        newPayment.pix_image = qrResponse.data.encodedImage;
+        await newPayment.save();
+      } catch (qrError) {
+        console.error("Erro ao buscar QR Code PIX:", qrError.message);
+      }
+    } else if (method === "BOLETO") {
+      try {
+        const boletoResponse = await asaasClient.get(`/payments/${asaasData.id}/identificationField`);
+        newPayment.boleto_barcode = boletoResponse.data.identificationField;
+        newPayment.boleto_url = asaasData.bankSlipUrl;
+        await newPayment.save();
+      } catch (boletoError) {
+        console.error("Erro ao buscar linha digitável:", boletoError.message);
+      }
+    }
+
+    const responseData = newPayment.toJSON();
+    responseData.pix = {
+      qr_code_image: newPayment.pix_image,
+      copy_and_paste: newPayment.pix_payload,
+      expires_at: newPayment.pix_expires_at,
+    };
+    responseData.boleto = {
+      digitable_line: newPayment.boleto_barcode,
+      pdf_url: newPayment.boleto_url,
+      due_date: newPayment.due_date,
+    };
+
+    return {
+      code: 201,
+      success: true,
+      message: "Cobrança agrupada gerada com sucesso.",
+      data: responseData,
+    };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+module.exports = createGroupedPaymentService;

@@ -1,9 +1,9 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/config");
-const Step = require("./Step");
 const TicketService = require("./TicketService");
 const User = require("./User");
 const ServiceProvider = require("./ServiceProvider");
+const { isPaidStatus } = require("../utils/asaasStatuses");
 
 const Payment = sequelize.define(
   "Payment",
@@ -15,18 +15,18 @@ const Payment = sequelize.define(
     },
     step_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, // 1. Tornar opcional para suportar múltiplos steps
       references: {
-        model: Step,
+        model: "Step",
         key: "id",
       },
-      onDelete: "CASCADE",
+      onDelete: "SET NULL", // Se a etapa for deletada, não deletar o pagamento inteiro
     },
     ticket_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: TicketService,
+        model: "TicketService",
         key: "id",
       },
       onDelete: "CASCADE",
@@ -35,7 +35,7 @@ const Payment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: User,
+        model: "User",
         key: "id",
       },
       onDelete: "CASCADE",
@@ -44,7 +44,7 @@ const Payment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: ServiceProvider,
+        model: "ServiceProvider",
         key: "provider_id",
       },
       onDelete: "SET NULL",
@@ -121,5 +121,61 @@ const Payment = sequelize.define(
     underscored: true,
   }
 );
+
+ 
+
+// 2. Definir o relacionamento N-N com Step através da tabela PaymentStep
+const Step = require("./Step");
+const PaymentStep = require("./PaymentStep");
+
+Payment.belongsToMany(Step, {
+  through: PaymentStep,
+  foreignKey: "payment_id",
+  otherKey: "step_id",
+});
+
+const collectStepIdsForPayment = async (payment, options = {}) => {
+  const { transaction } = options;
+  const stepIds = new Set();
+  if (payment.step_id) stepIds.add(payment.step_id);
+
+  const linkedSteps = await PaymentStep.findAll({
+    where: { payment_id: payment.id },
+    transaction,
+  });
+  linkedSteps.forEach((ls) => stepIds.add(ls.step_id));
+
+  return Array.from(stepIds);
+};
+
+Payment.addHook("afterCreate", async (payment, options) => {
+  if (!payment.paid_at || !isPaidStatus(payment.status)) return;
+
+  const stepIds = await collectStepIdsForPayment(payment, {
+    transaction: options?.transaction,
+  });
+  if (!stepIds.length) return;
+
+  const refreshStepFinancialClearanceService = require("../services/payment/refreshStepFinancialClearanceService");
+  await refreshStepFinancialClearanceService(stepIds, {
+    transaction: options?.transaction,
+    logger: console.log,
+  });
+});
+
+Payment.addHook("afterUpdate", async (payment, options) => {
+  if (!payment.changed("status") && !payment.changed("paid_at")) return;
+
+  const stepIds = await collectStepIdsForPayment(payment, {
+    transaction: options?.transaction,
+  });
+  if (!stepIds.length) return;
+
+  const refreshStepFinancialClearanceService = require("../services/payment/refreshStepFinancialClearanceService");
+  await refreshStepFinancialClearanceService(stepIds, {
+    transaction: options?.transaction,
+    logger: console.log,
+  });
+});
 
 module.exports = Payment;

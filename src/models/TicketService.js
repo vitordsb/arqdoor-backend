@@ -31,10 +31,10 @@ const TicketService = sequelize.define(
     },
     status: {
       type: DataTypes.ENUM(
-        "pendente", // ainda não foi aceito ou cancelado, pode ser deletado
-        "em andamento", // já foi aceito e esta em andamento, não pode ser deletado
-        "concluída", // concluido, já é possivel criar outro ticket, pode ser deletado ?
-        "cancelada" // pode deletar
+        "pendente", 
+        "em andamento", 
+        "concluída", 
+        "cancelada" 
       ),
       defaultValue: "pendente",
     },
@@ -50,11 +50,16 @@ const TicketService = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    allow_grouped_payment: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
   },
   {
     tableName: "TicketService",
-    timestamps: true, // ativa createdAt e updatedAt
-    underscored: true, // usa snake_case: created_at, updated_at
+    timestamps: true, 
+    underscored: true,  
   }
 );
 

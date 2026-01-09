@@ -5,9 +5,11 @@ const DEFAULT_TIMEOUT = 15000;
 // sandbox para testes: "https://sandbox.asaas.com/api/v3"
 
 const DEFAULT_BASE_URL = "https://sandbox.asaas.com/api/v3";
+const normalizeBaseUrl = (value) => (value ? value.replace(/\/+$/, "") : value);
+const envBaseUrl = process.env.ASAAS_BASE_URL || process.env.ASAAS_API_URL;
 
 const asaasClient = axios.create({
-  baseURL: process.env.ASAAS_BASE_URL || DEFAULT_BASE_URL,
+  baseURL: normalizeBaseUrl(envBaseUrl) || DEFAULT_BASE_URL,
   timeout: Number(process.env.ASAAS_TIMEOUT_MS) || DEFAULT_TIMEOUT,
   headers: {
     "Content-Type": "application/json",

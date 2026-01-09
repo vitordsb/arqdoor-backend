@@ -15,7 +15,7 @@ const Step = sequelize.define(
       onDelete: "CASCADE",
       references: {
         key: "id",
-        model: TicketService,
+        model: "TicketService",
       },
     },
     status: {
@@ -64,21 +64,24 @@ const Step = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    // campo para desacoplar o pagamento do progresso da etapa
+    is_financially_cleared: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     tableName: "Step",
-    timestamps: true, // ativa createdAt e updatedAt
-    underscored: true, // usa snake_case: created_at, updated_at
+    timestamps: true,  
+    underscored: true, 
   }
 );
 
 Step.beforeUpdate((step, options) => {
   if (step.changed("signature")) {
-    // Adiciona a data
     step.signatureUpdateAt = new Date();
-    // console.log(step.getDataValue("signature"));
     if (step.getDataValue("signature")) {
-      // Confirma a etapa
       step.confirm_contractor = true;
     } else {
       step.confirm_contractor = false;
@@ -86,9 +89,17 @@ Step.beforeUpdate((step, options) => {
   }
 
   if (step.changed("confirm_freelancer")) {
-    // Adiciona a data
     step.confirm_freelancerAt = new Date();
   }
 });
 
 module.exports = Step;
+
+const Payment = require("./Payment");
+const PaymentStep = require("./PaymentStep");
+
+Step.belongsToMany(Payment, {
+  through: PaymentStep,
+  foreignKey: "step_id",
+  otherKey: "payment_id",
+});
