@@ -140,7 +140,10 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
     const token = buildToken(existingUser);
     return {
       code: 200,
-      data: { token },
+      data: {
+        token,
+        needs_onboarding: !existingUser.perfil_completo,
+      },
       message: "Login via Google realizado com sucesso",
       success: true,
     };
@@ -172,21 +175,15 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
     return created;
   }
 
-  // Se veio pelo fluxo de registro, não faça login automático; peça para logar
-  if (mode === "register") {
-    return {
-      code: 201,
-      data: { user: created.user },
-      message: "Conta criada com Google. Faça login para continuar.",
-      success: true,
-    };
-  }
-
   const token = buildToken(created.user);
 
   return {
     code: 201,
-    data: { token, user: created.user },
+    data: {
+      token,
+      user: created.user,
+      needs_onboarding: true,
+    },
     message: "Usuário criado via Google com sucesso",
     success: true,
   };

@@ -46,6 +46,11 @@ const TicketService = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
+    payment_preference: {
+      type: DataTypes.ENUM("per_step", "at_end"),
+      allowNull: true,
+      defaultValue: null,
+    },
     payment: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

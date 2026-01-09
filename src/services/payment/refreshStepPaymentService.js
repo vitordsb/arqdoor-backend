@@ -9,7 +9,7 @@ const { Op } = require("sequelize");
 
 const refreshStepPaymentService = async (stepId, user) => {
   try {
-    // 1. Buscar pagamentos diretos (individuais)
+    const directPayments = await Payment.findAll({
       where: { step_id: stepId },
       order: [["created_at", "DESC"]],
     });
