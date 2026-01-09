@@ -98,7 +98,6 @@ const refreshStepFinancialClearanceService = async (stepIds, options = {}) => {
     await Step.update(
       {
         is_financially_cleared: true,
-        confirm_contractor: true,
       },
       { where: { id: clearedStepIds }, transaction }
     );

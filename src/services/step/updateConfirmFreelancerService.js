@@ -2,6 +2,7 @@ const ServiceProvider = require("../../models/ServiceProvider");
 const Step = require("../../models/Step");
 const TicketService = require("../../models/TicketService");
 const Payment = require("../../models/Payment");
+const PaymentStep = require("../../models/PaymentStep");
 const bcrypt = require("bcryptjs");
 const User = require("../../models/User");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
@@ -10,7 +11,6 @@ const dayjs = require("dayjs");
 
 const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
   try {
-    // Buscar a etapa
     const step = await Step.findByPk(step_id);
     if (!step) {
       return {
@@ -20,7 +20,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       };
     }
 
-    // Buscar o ticket
     const ticket = await TicketService.findByPk(step.ticket_id);
     if (!ticket) {
       return {
@@ -30,7 +29,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       };
     }
 
-    // Buscar o provider
     const userProvider = await ServiceProvider.findByPk(ticket.provider_id);
     if (!userProvider) {
       return {
@@ -40,7 +38,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       };
     }
 
-    // Validar se o usuario logado e o mesmo 'dono' do ticket
     if (userProvider.user_id !== user.id) {
       return {
         code: 400,
@@ -48,7 +45,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       };
     }
 
-    // Buscar o usuario
     const userTicket = await User.findByPk(userProvider.user_id);
     if (!userTicket) {
       return {
@@ -58,7 +54,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       };
     }
 
-    // Validar se a senha enviada e a mesma do usuario dono do ticket
     if (!bcrypt.compareSync(dataUpdate.password, userTicket.password)) {
       return {
         code: 400,
@@ -69,10 +64,22 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
 
     const refreshPreviousStepPayment = async (prevStepId) => {
       try {
-        const payment = await Payment.findOne({
-          where: { step_id: prevStepId },
-          order: [["created_at", "DESC"]],
+        const directPayments = await Payment.findAll({
+          where: { step_id: prevStepId }
         });
+
+        const paymentSteps = await PaymentStep.findAll({ where: { step_id: prevStepId } });
+        const groupedPaymentIds = paymentSteps.map((ps) => ps.payment_id);
+        const groupedPayments = await Payment.findAll({
+          where: { id: groupedPaymentIds }
+        });
+
+        const allPayments = [...directPayments, ...groupedPayments].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        const payment = allPayments[0];
+
         if (!payment || !payment.asaas_payment_id) return false;
 
         const asaaspayment = await asaasClient.get(`/payments/${payment.asaas_payment_id}`);
@@ -97,7 +104,6 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       }
     };
 
-    // Se a preferência for pagamento por etapa, bloqueia avanço sem pagamento anterior
     const prefersPerStep = (userProvider.payment_preference || "").toLowerCase() === "per_step";
     if (prefersPerStep) {
       const allSteps = await Step.findAll({
@@ -108,7 +114,14 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       const previousStep = currentIndex > 0 ? allSteps[currentIndex - 1] : null;
 
       if (previousStep && Number(previousStep.price || 0) > 0) {
-        const prevPayments = await Payment.findAll({ where: { step_id: previousStep.id } });
+        const directPrevPayments = await Payment.findAll({ where: { step_id: previousStep.id } });
+        
+        const prevPaymentSteps = await PaymentStep.findAll({ where: { step_id: previousStep.id } });
+        const prevGroupedIds = prevPaymentSteps.map(ps => ps.payment_id);
+        const groupedPrevPayments = await Payment.findAll({ where: { id: prevGroupedIds } });
+
+        const prevPayments = [...directPrevPayments, ...groupedPrevPayments];
+
         const hasPaid = prevPayments.some((p) => isPaidStatus(p.status));
         const paid = hasPaid || (await refreshPreviousStepPayment(previousStep.id));
         if (!paid) {
@@ -121,15 +134,21 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       }
     }
 
-    // Atualizar o confirm_freelancer + contar tentativas de conclusão
     const shouldIncrement =
       dataUpdate.confirm_freelancer === true && !step.confirm_freelancer;
     const currentRework = step.rework_count || 0;
 
-    await step.update({
+    const updateDataStep = {
       confirm_freelancer: dataUpdate.confirm_freelancer,
       rework_count: shouldIncrement ? currentRework + 1 : currentRework,
-    });
+    };
+
+    if (dataUpdate.confirm_freelancer) {
+      updateDataStep.status = "Em Andamento";
+      updateDataStep.confirm_contractor = false; 
+    }
+
+    await step.update(updateDataStep);
 
     return {
       code: 200,

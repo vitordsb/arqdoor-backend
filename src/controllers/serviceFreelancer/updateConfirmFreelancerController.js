@@ -4,7 +4,10 @@ const updateConfirmFreelancerController = async (req, res) => {
   try {
     const result = await updateConfirmFreelancerService(
       req.params.id,
-      req.confirmFreelancer,
+      {
+        confirm_freelancer: req.body.confirmFreelancer,
+        password: req.body.password,
+      },
       req.user
     );
     return res.status(result.code).json(result);

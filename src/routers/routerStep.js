@@ -9,7 +9,7 @@ const deleteStepController = require("../controllers/step/deleteStepController")
 const updateStatusStepController = require("../controllers/step/updateStatusStepController");
 const updateSignatureStepController = require("../controllers/step/updateSignatureStepController");
 const updateSignatureStepValidator = require("../middlewares/validators/step/updateSignatureStepValidator");
-const updateConfirmFreelancerController = require("../controllers/step/updateConfirmFreelancerService");
+const updateConfirmFreelancerController = require("../controllers/serviceFreelancer/updateConfirmFreelancerController");
 const updateConfirmFreelancerValidator = require("../middlewares/validators/step/updateConfirmFreelancerValidator");
 const getStepMetaController = require("../controllers/step/getStepMetaController");
 

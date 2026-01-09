@@ -5,18 +5,15 @@ const TicketService = require("../../models/TicketService");
 const Step = require("../../models/Step");
 const PaymentStep = require("../../models/PaymentStep");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
-const refreshStepFinancialClearanceService = require("./refreshStepFinancialClearanceService");
 const { Op } = require("sequelize");
 
 const refreshStepPaymentService = async (stepId, user) => {
   try {
     // 1. Buscar pagamentos diretos (individuais)
-    const directPayments = await Payment.findAll({
       where: { step_id: stepId },
       order: [["created_at", "DESC"]],
     });
 
-    // 2. Buscar pagamentos agrupados (via PaymentStep)
     const paymentSteps = await PaymentStep.findAll({
       where: { step_id: stepId },
     });
@@ -30,7 +27,6 @@ const refreshStepPaymentService = async (stepId, user) => {
       });
     }
 
-    // Combinar e ordenar por data de criação (mais recente primeiro)
     const payments = [...directPayments, ...groupedPayments].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
@@ -43,7 +39,6 @@ const refreshStepPaymentService = async (stepId, user) => {
       };
     }
 
-    // garante que usuário pertence ao ticket (prestador ou contratante)
     if (user && user.type !== "contratante" && user.type !== "prestador") {
       return {
         code: 403,
@@ -57,8 +52,6 @@ const refreshStepPaymentService = async (stepId, user) => {
     let paidPayment = payments.find((p) => isPaidStatus(p.status));
     let stepIdsForRefresh = [stepId];
 
-    // Se não encontrou pagamento pago localmente, verifica todos os pendentes no Asaas
-    // (O cliente pode ter pago uma tentativa anterior, não necessariamente a última)
     if (!paidPayment) {
       const pendingPayments = payments.filter((p) => !isPaidStatus(p.status));
 
@@ -87,7 +80,6 @@ const refreshStepPaymentService = async (stepId, user) => {
 
           await payment.update(updateData);
 
-          // Se encontrou um pagamento pago, atualiza a variável e para o loop
           if (isPaidStatus(updateData.status)) {
             paidPayment = payment;
             break;
@@ -109,22 +101,9 @@ const refreshStepPaymentService = async (stepId, user) => {
     if (paid && paidPayment) {
       const stepIdsToUpdate = [];
 
-      // Caso 1: Pagamento Individual (Legado)
       if (paidPayment.step_id) {
         stepIdsToUpdate.push(paidPayment.step_id);
-        try {
-          const paidStep = await Step.findByPk(paidPayment.step_id);
-          if (paidStep) {
-            await paidStep.update({
-              status: "Concluido",
-              confirm_contractor: true,
-            });
-          }
-        } catch (e) {
-          console.warn("Falha ao marcar etapa como concluída após refresh de pagamento", e);
-        }
       }
-      // Caso 2: Pagamento Agrupado
       else {
         const linkedSteps = await PaymentStep.findAll({ where: { payment_id: paidPayment.id } });
         linkedSteps.forEach((ls) => stepIdsToUpdate.push(ls.step_id));
@@ -152,9 +131,12 @@ const refreshStepPaymentService = async (stepId, user) => {
       }
     }
 
-    await refreshStepFinancialClearanceService(stepIdsForRefresh, {
-      logger: console.log,
-    });
+    if (paid && stepIdsForRefresh.length > 0) {
+      await Step.update(
+        { is_financially_cleared: true },
+        { where: { id: { [Op.in]: stepIdsForRefresh } } }
+      );
+    }
 
     const statusToReturn = paidPayment ? paidPayment.status : (payments[0]?.status || "PENDING");
 

@@ -92,7 +92,6 @@ const confirmStepPaymentService = async (stepId, user) => {
       await step.update(
         {
           is_financially_cleared: true,
-          confirm_contractor: true,
         },
         { transaction }
       );
