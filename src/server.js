@@ -36,9 +36,46 @@ const { swaggerUi, swaggerSpec } = require("../swagger");
 const bcrypt = require("bcryptjs");
 const User = require("./models/User");
 
+const defaultCorsOrigins = [
+  "http://localhost:5173",
+  "https://arqdoor-app.vercel.app",
+  "https://arqdoor.com",
+  "https://www.arqdoor.com",
+];
+const envCorsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedCorsOrigins = envCorsOrigins.length > 0 ? envCorsOrigins : defaultCorsOrigins;
+const allowAllCors = process.env.CORS_ALLOW_ALL === "true" || allowedCorsOrigins.includes("*");
+const allowSubdomains = process.env.CORS_ALLOW_SUBDOMAINS === "true";
+const corsBaseDomain = (process.env.CORS_BASE_DOMAIN || "").trim();
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (allowAllCors) return true;
+  if (allowedCorsOrigins.includes(origin)) return true;
+  if (allowSubdomains && corsBaseDomain) {
+    try {
+      const hostname = new URL(origin).hostname;
+      if (hostname === corsBaseDomain || hostname.endsWith(`.${corsBaseDomain}`)) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://arqdoor-app.vercel.app", "https://arqdoor.com", "https://www.arqdoor.com"],
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
