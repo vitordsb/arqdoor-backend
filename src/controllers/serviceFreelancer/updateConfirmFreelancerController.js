@@ -2,12 +2,14 @@ const updateConfirmFreelancerService = require("../../services/step/updateConfir
 
 const updateConfirmFreelancerController = async (req, res) => {
   try {
+    const payload = req.confirmFreelancer || {
+      confirm_freelancer: req.body?.confirm_freelancer ?? req.body?.confirmFreelancer,
+      password: req.body?.password,
+    };
+
     const result = await updateConfirmFreelancerService(
       req.params.id,
-      {
-        confirm_freelancer: req.body.confirmFreelancer,
-        password: req.body.password,
-      },
+      payload,
       req.user
     );
     return res.status(result.code).json(result);

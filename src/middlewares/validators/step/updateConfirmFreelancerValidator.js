@@ -3,7 +3,9 @@ const Joi = require("joi");
 
 const updateConfirmFreelancerValidator = async (req, res, next) => {
   try {
-    const { confirm_freelancer, password } = req.body || {};
+    const { confirm_freelancer, confirmFreelancer, password } = req.body || {};
+    const normalizedConfirm =
+      typeof confirm_freelancer === "boolean" ? confirm_freelancer : confirmFreelancer;
 
     const schema = Joi.object({
       confirm_freelancer: Joi.boolean().required(),
@@ -11,7 +13,7 @@ const updateConfirmFreelancerValidator = async (req, res, next) => {
     });
 
     const { error, value } = schema.validate({
-      confirm_freelancer,
+      confirm_freelancer: normalizedConfirm,
       password,
     });
 

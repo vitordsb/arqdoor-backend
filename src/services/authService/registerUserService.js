@@ -19,6 +19,7 @@ const registerUserService = async (dataUser) => {
         type: user.user.type,
         cidade_id: user.user.cidade_id,
         perfil_completo: user.user.perfil_completo,
+        signature_password_set: user.user.signature_password_set,
       },
       process.env.SECRET,
       { expiresIn: "10h" },

@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const User = require("../../models/User");
+const bcrypt = require("bcryptjs");
 
 const updateUserService = async (dataUser, id_user) => {
   try {
@@ -84,6 +85,11 @@ const updateUserService = async (dataUser, id_user) => {
           success: false,
         };
       }
+    }
+
+    if (dataUser.password) {
+      dataUser.password = await bcrypt.hash(dataUser.password, 12);
+      dataUser.signature_password_set = true;
     }
 
     // atualizar usuario

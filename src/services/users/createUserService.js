@@ -76,7 +76,18 @@ const createUserService = async (dataUser) => {
     const passwordCript = await bycrypt.hashSync(dataUser.password, 12);
     dataUser.password = passwordCript;
 
-    const user = await User.create(dataUser, { transaction: t });
+    const signaturePasswordSet =
+      typeof dataUser.signature_password_set === "boolean"
+        ? dataUser.signature_password_set
+        : true;
+
+    const user = await User.create(
+      {
+        ...dataUser,
+        signature_password_set: signaturePasswordSet,
+      },
+      { transaction: t }
+    );
 
     // se o usuario for um prestador, criar ele na tabela prestador
     if (user.type === "prestador") {

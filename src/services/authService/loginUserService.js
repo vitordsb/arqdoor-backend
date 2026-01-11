@@ -32,6 +32,12 @@ const loginUserService = async (dataUser) => {
     }
     //  se a senha do usuario achado e igual com a senha discriptografada
 
+    let signaturePasswordSet = user.signature_password_set;
+    if (signaturePasswordSet === null || signaturePasswordSet === undefined) {
+      signaturePasswordSet = true;
+      await user.update({ signature_password_set: true });
+    }
+
     const token = await jwt.sign(
       {
         id: user.id,
@@ -43,6 +49,7 @@ const loginUserService = async (dataUser) => {
         cidade_id: user.cidade_id,
         termos_aceitos: user.termos_aceitos,
         perfil_completo: user.perfil_completo,
+        signature_password_set: signaturePasswordSet,
       },
       process.env.SECRET,
       { expiresIn: "10h" }

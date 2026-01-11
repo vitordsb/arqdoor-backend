@@ -124,6 +124,22 @@ const refreshTicketPaymentService = async (ticketId, user) => {
       }
     }
 
+    const hasPaid = allPayments.some((payment) => isPaidStatus(payment.status));
+    const paymentPreference = (ticket.payment_preference || "").toString().toLowerCase();
+    if (hasPaid && paymentPreference === "at_end") {
+      const normalizedStatus = (ticket.status || "").toString().toLowerCase();
+      const updatePayload = {};
+      if (!ticket.payment) {
+        updatePayload.payment = true;
+      }
+      if (!["em andamento", "concluída", "concluida", "cancelada"].includes(normalizedStatus)) {
+        updatePayload.status = "em andamento";
+      }
+      if (Object.keys(updatePayload).length > 0) {
+        await ticket.update(updatePayload);
+      }
+    }
+
     return {
       code: 200,
       success: true,

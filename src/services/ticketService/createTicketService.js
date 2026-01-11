@@ -87,7 +87,7 @@ const createTicketService = async (data, user) => {
     // }
 
     data.provider_id = userProvider.provider_id;
-    data.payment_preference = userProvider.payment_preference || null;
+    data.payment_preference = userProvider.payment_preference || "at_end";
 
     const ticketService = await TicketService.create(data);
 

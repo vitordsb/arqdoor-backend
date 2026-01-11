@@ -20,6 +20,7 @@ const buildToken = (user) =>
       cidade_id: user.cidade_id,
       termos_aceitos: user.termos_aceitos,
       perfil_completo: user.perfil_completo,
+      signature_password_set: user.signature_password_set,
     },
     process.env.SECRET,
     { expiresIn: "10h" }
@@ -137,6 +138,13 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
       };
     }
 
+    if (
+      existingUser.signature_password_set === null ||
+      existingUser.signature_password_set === undefined
+    ) {
+      await existingUser.update({ signature_password_set: false });
+    }
+
     const token = buildToken(existingUser);
     return {
       code: 200,
@@ -169,6 +177,7 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
     termos_aceitos: true,
     is_email_verified: true,
     perfil_completo: false,
+    signature_password_set: false,
   });
 
   if (!created?.success) {

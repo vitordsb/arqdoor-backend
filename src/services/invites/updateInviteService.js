@@ -50,7 +50,7 @@ const updateInviteService = async (inviteId, data, user) => {
     await invite.update({
       title: data.title !== undefined ? data.title : invite.title,
       description: data.description !== undefined ? data.description : invite.description,
-      payment_preference: data.payment_preference || invite.payment_preference,
+      payment_preference: data.payment_preference ?? invite.payment_preference ?? "at_end",
       steps,
       status: nextStatus,
     });

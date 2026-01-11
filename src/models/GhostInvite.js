@@ -83,7 +83,7 @@ const GhostInvite = sequelize.define(
     payment_preference: {
       type: DataTypes.ENUM("per_step", "at_end"),
       allowNull: false,
-      defaultValue: "per_step",
+      defaultValue: "at_end",
     },
     status: {
       type: DataTypes.ENUM("draft", "active", "accepted", "cancelled"),

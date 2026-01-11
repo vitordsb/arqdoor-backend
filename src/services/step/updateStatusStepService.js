@@ -58,13 +58,40 @@ const updateStatusStepService = async (step_id, dataUpdate, user) => {
     }
 
     // Bloqueia concluir etapa paga sem pagamento confirmado
-    if (
-      dataUpdate === "Concluido" &&
-      Number(step.price || 0) > 0
-    ) {
-      const paid = await Payment.findOne({
-        where: { step_id: step.id, status: { [Op.in]: SUCCESS_STATUSES } },
-      });
+    if (dataUpdate === "Concluido" && Number(step.price || 0) > 0) {
+      let paid = !!step.is_financially_cleared;
+      const paymentPreference = (ticket.payment_preference || "").toString().toLowerCase();
+
+      if (!paid && paymentPreference === "at_end") {
+        if (ticket.payment) {
+          paid = true;
+        } else {
+          const signatureStep = await Step.findOne({
+            where: { ticket_id: ticket.id },
+            order: [["id", "ASC"]],
+          });
+          if (signatureStep?.is_financially_cleared) {
+            paid = true;
+          } else if (signatureStep?.id) {
+            const depositPayment = await Payment.findOne({
+              where: {
+                ticket_id: ticket.id,
+                step_id: signatureStep.id,
+                status: { [Op.in]: SUCCESS_STATUSES },
+              },
+            });
+            paid = !!depositPayment;
+          }
+        }
+      }
+
+      if (!paid && paymentPreference !== "at_end") {
+        const paidPayment = await Payment.findOne({
+          where: { step_id: step.id, status: { [Op.in]: SUCCESS_STATUSES } },
+        });
+        paid = !!paidPayment;
+      }
+
       if (!paid) {
         return {
           code: 400,

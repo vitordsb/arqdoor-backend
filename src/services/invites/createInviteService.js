@@ -50,7 +50,7 @@ const createInviteService = async (data, user) => {
       token,
       title: data.title || null,
       description: data.description || null,
-      payment_preference: data.payment_preference || provider.payment_preference || "per_step",
+      payment_preference: data.payment_preference || provider.payment_preference || "at_end",
       steps,
       status: "draft",
     });

@@ -67,6 +67,11 @@ const User = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    signature_password_set: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "User",

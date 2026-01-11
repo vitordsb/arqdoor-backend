@@ -60,7 +60,26 @@ const updateSignatureAttachmentService = async (
       };
     }
 
-    if (!bcrypt.compareSync(dataUpdate.password, userLogado.password)) {
+    const signatureReady =
+      userLogado.signature_password_set === true && !!userLogado.password;
+    if (!signatureReady) {
+      return {
+        code: 400,
+        message: "Você não configurou sua senha de assinatura.",
+        success: false,
+      };
+    }
+
+    const trimmedPassword = (dataUpdate.password || "").trim();
+    if (!trimmedPassword) {
+      return {
+        code: 400,
+        message: "Senha de assinatura obrigatória.",
+        success: false,
+      };
+    }
+
+    if (!bcrypt.compareSync(trimmedPassword, userLogado.password)) {
       return {
         code: 400,
         message: "Senha incorreta",

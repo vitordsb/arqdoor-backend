@@ -19,7 +19,7 @@ async function ensureColumns() {
     for (const [name, definition] of Object.entries(columns)) {
       if (existing.has(name)) continue;
       console.log(`Adding column ${name}...`);
-      await sequelize.query(`ALTER TABLE \`Payment\` ADD COLUMN IF NOT EXISTS \`${name}\` ${definition};`);
+      await sequelize.query(`ALTER TABLE \`Payment\` ADD COLUMN \`${name}\` ${definition};`);
       console.log(`Column ${name} added.`);
     }
 

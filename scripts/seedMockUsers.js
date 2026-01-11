@@ -166,7 +166,7 @@ const updateProviderProfile = async (userId) => {
   const about = pick(aboutSnippets);
   const rating = Number((3.2 + Math.random() * 1.7).toFixed(2));
   const viewsProfile = Math.floor(Math.random() * 420);
-  const paymentPreference = Math.random() > 0.5 ? "per_step" : "at_end";
+  const paymentPreference = "at_end";
 
   await ServiceProvider.update(
     {

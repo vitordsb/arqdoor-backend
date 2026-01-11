@@ -112,7 +112,7 @@ const acceptInviteService = async (token, user) => {
         conversation_id: conversation.conversation_id,
         provider_id: provider.provider_id,
         status: "em andamento",
-        payment_preference: invite.payment_preference || provider.payment_preference || "per_step",
+        payment_preference: invite.payment_preference || provider.payment_preference || "at_end",
       },
       { transaction }
     );
