@@ -6,6 +6,7 @@ const asaasClient = require("../../config/asaas");
 const { Op } = require("sequelize");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
 const refreshStepFinancialClearanceService = require("./refreshStepFinancialClearanceService");
+const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentStatus");
 
 const refreshTicketPaymentService = async (ticketId, user) => {
   try {
@@ -125,7 +126,9 @@ const refreshTicketPaymentService = async (ticketId, user) => {
     }
 
     const hasPaid = allPayments.some((payment) => isPaidStatus(payment.status));
-    const paymentPreference = (ticket.payment_preference || "").toString().toLowerCase();
+    const paymentPreference = (ticket.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
     if (hasPaid && paymentPreference === "at_end") {
       const normalizedStatus = (ticket.status || "").toString().toLowerCase();
       const updatePayload = {};
@@ -138,6 +141,15 @@ const refreshTicketPaymentService = async (ticketId, user) => {
       if (Object.keys(updatePayload).length > 0) {
         await ticket.update(updatePayload);
       }
+    }
+
+    try {
+      await updateTicketPaymentStatus(ticket.id);
+    } catch (e) {
+      console.warn(
+        "Falha ao atualizar status de pagamento do ticket:",
+        e?.message || e
+      );
     }
 
     return {

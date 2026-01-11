@@ -2,6 +2,7 @@ const Conversation = require("../../models/Conversation");
 const ServiceProvider = require("../../models/ServiceProvider");
 const TicketService = require("../../models/TicketService");
 const User = require("../../models/User");
+const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentStatus");
 
 const getAllTicketService = async (dataTicket, user) => {
   try {
@@ -34,11 +35,28 @@ const getAllTicketService = async (dataTicket, user) => {
       },
     });
 
+    const updatedTickets = await Promise.all(
+      tickets.map(async (ticket) => {
+        try {
+          const status = await updateTicketPaymentStatus(ticket.id);
+          if (status) {
+            ticket.payment_status = status;
+          }
+        } catch (e) {
+          console.warn(
+            "Falha ao atualizar status de pagamento do ticket:",
+            e?.message || e
+          );
+        }
+        return ticket;
+      })
+    );
+
     return {
       code: 200,
       message: "Todos os tickets encontrados",
       success: true,
-      tickets,
+      tickets: updatedTickets,
     };
   } catch (error) {
     throw new Error(error.message);

@@ -48,11 +48,66 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       return { code: 404, success: false, message: "Ticket não encontrado." };
     }
 
-    if (!ticket.allow_grouped_payment && steps.length > 1) {
+    const paymentPreference = (ticket.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
+    const isCustom = paymentPreference === "custom";
+    if (paymentPreference === "at_end") {
+      return {
+        code: 400,
+        success: false,
+        message: "Este ticket utiliza depósito em garantia.",
+      };
+    }
+
+    if (!ticket.allow_grouped_payment && !isCustom) {
       return {
         code: 403,
         success: false,
         message: "O pagamento agrupado não está habilitado para este serviço.",
+      };
+    }
+
+    if (!isCustom) {
+      const invalidSteps = steps.filter(
+        (step) => !step.confirm_freelancer || !step.confirm_contractor
+      );
+      if (invalidSteps.length > 0) {
+        return {
+          code: 400,
+          success: false,
+          message:
+            "Todas as etapas precisam estar concluídas e aceitas pelo cliente.",
+        };
+      }
+    } else {
+      const rejectedSteps = steps.filter(
+        (step) => (step.status || "").toString().toLowerCase() === "recusado"
+      );
+      if (rejectedSteps.length > 0) {
+        return {
+          code: 400,
+          success: false,
+          message: "Etapas recusadas não podem ser pagas.",
+        };
+      }
+    }
+
+    const invalidPrice = steps.find((step) => Number(step.price) <= 0);
+    if (invalidPrice) {
+      return {
+        code: 400,
+        success: false,
+        message: "Não é possível pagar etapas sem valor.",
+      };
+    }
+
+    const belowMin = steps.find((step) => Number(step.price) < 5);
+    if (belowMin) {
+      return {
+        code: 400,
+        success: false,
+        message: "O valor mínimo de cada etapa é R$ 5,00.",
       };
     }
 

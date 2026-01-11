@@ -5,6 +5,7 @@ const TicketService = require("../../models/TicketService");
 const Step = require("../../models/Step");
 const PaymentStep = require("../../models/PaymentStep");
 const { isPaidStatus } = require("../../utils/asaasStatuses");
+const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentStatus");
 const { Op } = require("sequelize");
 
 const refreshStepPaymentService = async (stepId, user) => {
@@ -136,6 +137,53 @@ const refreshStepPaymentService = async (stepId, user) => {
         { is_financially_cleared: true },
         { where: { id: { [Op.in]: stepIdsForRefresh } } }
       );
+
+      if (paidPayment?.ticket_id) {
+        try {
+          const ticket = await TicketService.findByPk(paidPayment.ticket_id);
+          const paymentPreference = (ticket?.payment_preference || "")
+            .toString()
+            .toLowerCase();
+          if (ticket && paymentPreference === "custom") {
+            const stepsToUpdate = await Step.findAll({
+              where: { id: { [Op.in]: stepIdsForRefresh } },
+            });
+            const now = dayjs();
+            for (const step of stepsToUpdate) {
+              const status = (step.status || "").toString().toLowerCase();
+              if (status !== "pendente") continue;
+              const start = dayjs(step.start_date);
+              const end = dayjs(step.end_date);
+              const durationDays =
+                start.isValid() && end.isValid()
+                  ? Math.max(1, end.diff(start, "day") || 1)
+                  : 1;
+              const newStart = now.toDate();
+              const newEnd = now.add(durationDays, "day").toDate();
+              await step.update({
+                start_date: newStart,
+                end_date: newEnd,
+              });
+            }
+          }
+        } catch (e) {
+          console.warn(
+            "Falha ao atualizar datas das etapas no modo personalizado:",
+            e?.message || e
+          );
+        }
+      }
+    }
+
+    if (paidPayment?.ticket_id) {
+      try {
+        await updateTicketPaymentStatus(paidPayment.ticket_id);
+      } catch (e) {
+        console.warn(
+          "Falha ao atualizar status de pagamento do ticket:",
+          e?.message || e
+        );
+      }
     }
 
     const statusToReturn = paidPayment ? paidPayment.status : (payments[0]?.status || "PENDING");

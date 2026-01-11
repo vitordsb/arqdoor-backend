@@ -1,6 +1,6 @@
 const Conversation = require("../../models/Conversation");
-const ServiceProvider = require("../../models/ServiceProvider");
 const TicketService = require("../../models/TicketService");
+const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentStatus");
 
 const getOneTicketService = async (ticket_id, user) => {
   try {
@@ -35,6 +35,18 @@ const getOneTicketService = async (ticket_id, user) => {
         success: false,
       };
     }
+    try {
+      const status = await updateTicketPaymentStatus(ticket.id);
+      if (status) {
+        ticket.payment_status = status;
+      }
+    } catch (e) {
+      console.warn(
+        "Falha ao atualizar status de pagamento do ticket:",
+        e?.message || e
+      );
+    }
+
     return {
       code: 200,
       message: "Ticket encontrado",

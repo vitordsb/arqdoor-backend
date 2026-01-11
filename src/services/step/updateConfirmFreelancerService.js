@@ -123,7 +123,28 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
       }
     };
 
-    const prefersPerStep = (userProvider.payment_preference || "").toLowerCase() === "per_step";
+    const paymentPreference = (
+      ticket.payment_preference ||
+      userProvider.payment_preference ||
+      ""
+    )
+      .toString()
+      .toLowerCase();
+    const prefersPerStep = paymentPreference === "per_step";
+    const isCustom = paymentPreference === "custom";
+
+    if (
+      isCustom &&
+      dataUpdate.confirm_freelancer &&
+      Number(step.price || 0) > 0 &&
+      !step.is_financially_cleared
+    ) {
+      return {
+        code: 400,
+        message: "Pagamento necessário antes de concluir a etapa.",
+        success: false,
+      };
+    }
     if (prefersPerStep) {
       const allSteps = await Step.findAll({
         where: { ticket_id: ticket.id },

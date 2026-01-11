@@ -57,10 +57,27 @@ const updateStatusStepService = async (step_id, dataUpdate, user) => {
       };
     }
 
+    const normalizedStatus = (dataUpdate || "").toString().toLowerCase();
+    const paymentPreference = (ticket.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
+
+    if (
+      normalizedStatus === "em andamento" &&
+      paymentPreference === "custom" &&
+      Number(step.price || 0) > 0 &&
+      !step.is_financially_cleared
+    ) {
+      return {
+        code: 400,
+        message: "Pagamento necessário para iniciar esta etapa.",
+        success: false,
+      };
+    }
+
     // Bloqueia concluir etapa paga sem pagamento confirmado
     if (dataUpdate === "Concluido" && Number(step.price || 0) > 0) {
       let paid = !!step.is_financially_cleared;
-      const paymentPreference = (ticket.payment_preference || "").toString().toLowerCase();
 
       if (!paid && paymentPreference === "at_end") {
         if (ticket.payment) {

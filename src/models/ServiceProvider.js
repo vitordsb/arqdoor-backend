@@ -32,7 +32,7 @@ const ServiceProvider = sequelize.define(
       defaultValue: 0.0,
     },
     payment_preference: {
-      type: DataTypes.ENUM("per_step", "at_end"),
+      type: DataTypes.ENUM("per_step", "at_end", "custom"),
       allowNull: false,
       defaultValue: "at_end",
     },

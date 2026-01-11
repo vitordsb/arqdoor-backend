@@ -44,13 +44,20 @@ const createInviteService = async (data, user) => {
       attempt += 1;
     }
 
+    const rawPreference = (data.payment_preference || provider.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
+    const invitePreference = ["per_step", "at_end"].includes(rawPreference)
+      ? rawPreference
+      : "at_end";
+
     const invite = await GhostInvite.create({
       user_id: user.id,
       provider_id: provider.provider_id,
       token,
       title: data.title || null,
       description: data.description || null,
-      payment_preference: data.payment_preference || provider.payment_preference || "at_end",
+      payment_preference: invitePreference,
       steps,
       status: "draft",
     });

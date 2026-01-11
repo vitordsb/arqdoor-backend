@@ -8,7 +8,9 @@
     "patch:payments": "node scripts/ensurePaymentColumns.js",
     "patch:payment-method": "node scripts/patchPaymentMethod.js",
     "patch:user-signature": "node scripts/ensureUserSignaturePassword.js",
+    "patch:user-signature-defaults": "node scripts/patchSignaturePasswordDefaults.js",
     "patch:tickets": "node scripts/ensureTicketServiceColumns.js",
+    "patch:providers": "node scripts/ensureProviderColumns.js",
     "patch:steps": "node scripts/ensureStepColumns.js",
     "seed:mock-users": "node scripts/seedMockUsers.js",
     "test": "echo \"Error: no test specified\" && exit 1"

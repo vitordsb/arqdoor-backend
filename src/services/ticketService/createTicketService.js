@@ -87,7 +87,21 @@ const createTicketService = async (data, user) => {
     // }
 
     data.provider_id = userProvider.provider_id;
-    data.payment_preference = userProvider.payment_preference || "at_end";
+    const requestedPreference = (data.payment_preference || "")
+      .toString()
+      .toLowerCase();
+    const paymentPreference = ["per_step", "at_end", "custom"].includes(
+      requestedPreference
+    )
+      ? requestedPreference
+      : (userProvider.payment_preference || "at_end").toString().toLowerCase();
+
+    data.payment_preference = paymentPreference;
+    if (paymentPreference === "custom") {
+      data.allow_grouped_payment = true;
+    }
+    data.payment_status =
+      paymentPreference === "at_end" ? "awaiting_deposit" : "awaiting_steps";
 
     const ticketService = await TicketService.create(data);
 

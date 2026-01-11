@@ -7,7 +7,7 @@ const updateProviderValidator = async (req, res, next) => {
     const schema = Joi.object({
       profession: Joi.string().min(3).max(50).allow("").optional(),
       about: Joi.string().min(10).max(1000).allow("").optional(),
-      payment_preference: Joi.string().valid("per_step", "at_end").optional(),
+      payment_preference: Joi.string().valid("per_step", "at_end", "custom").optional(),
     });
 
     const { error, value } = schema.validate({ profession, about, payment_preference });

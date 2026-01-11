@@ -81,6 +81,9 @@ const acceptInviteService = async (token, user) => {
         success: false,
       };
     }
+    const paymentPreference =
+      invite.payment_preference || provider.payment_preference || "at_end";
+    const initialStatus = paymentPreference === "at_end" ? "pendente" : "em andamento";
 
     const providerUserId = provider.user_id;
 
@@ -111,8 +114,10 @@ const acceptInviteService = async (token, user) => {
       {
         conversation_id: conversation.conversation_id,
         provider_id: provider.provider_id,
-        status: "em andamento",
-        payment_preference: invite.payment_preference || provider.payment_preference || "at_end",
+        status: initialStatus,
+        payment_preference: paymentPreference,
+        payment_status:
+          paymentPreference === "at_end" ? "awaiting_deposit" : "awaiting_steps",
       },
       { transaction }
     );

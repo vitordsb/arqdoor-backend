@@ -85,6 +85,17 @@ const createStepPaymentService = async (stepId, payload = {}, user) => {
     if (!ticket) {
       return { code: 404, message: "Ticket não encontrado para a etapa", success: false };
     }
+    const paymentPreference = (ticket.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
+    if (paymentPreference === "at_end") {
+      return {
+        code: 400,
+        message: "Este ticket utiliza depósito em garantia.",
+        success: false,
+      };
+    }
+    const isCustom = paymentPreference === "custom";
 
     const conversation = await Conversation.findByPk(ticket.conversation_id);
     if (!conversation) {
@@ -99,17 +110,36 @@ const createStepPaymentService = async (stepId, payload = {}, user) => {
       return { code: 403, message: "Somente o contratante pode gerar pagamentos", success: false };
     }
 
-    if (!step.confirm_freelancer) {
-      return {
-        code: 400,
-        message: "O prestador ainda não marcou a etapa como concluída",
-        success: false,
-      };
+    if (!isCustom) {
+      if (!step.confirm_freelancer) {
+        return {
+          code: 400,
+          message: "O prestador ainda não marcou a etapa como concluída",
+          success: false,
+        };
+      }
+      if (!step.confirm_contractor) {
+        return {
+          code: 400,
+          message: "O cliente ainda não aceitou a etapa",
+          success: false,
+        };
+      }
+    } else {
+      const stepStatus = (step.status || "").toString().toLowerCase();
+      if (stepStatus === "recusado") {
+        return {
+          code: 400,
+          message: "Etapa recusada não pode ser paga.",
+          success: false,
+        };
+      }
     }
-    if (!step.confirm_contractor) {
+
+    if (step.is_financially_cleared) {
       return {
         code: 400,
-        message: "O cliente ainda não aceitou a etapa",
+        message: "Esta etapa já está paga.",
         success: false,
       };
     }

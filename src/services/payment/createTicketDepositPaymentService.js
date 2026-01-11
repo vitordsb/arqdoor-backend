@@ -6,6 +6,7 @@ const Step = require("../../models/Step");
 const TicketService = require("../../models/TicketService");
 const ensureAsaasCustomerService = require("./ensureAsaasCustomerService");
 const { isPaidStatus, isPendingStatus } = require("../../utils/asaasStatuses");
+const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentStatus");
 
 const EXPIRATION_MINUTES = Number(process.env.ASAAS_PIX_EXPIRATION_MINUTES || 60);
 const BOLETO_DAYS_TO_DUE = Number(process.env.ASAAS_BOLETO_DAYS_TO_DUE || 3);
@@ -83,6 +84,16 @@ const createTicketDepositPaymentService = async (ticketId, user, payload = {}) =
     const ticket = await TicketService.findByPk(ticketId);
     if (!ticket) {
       return { code: 404, message: "Ticket não encontrado", success: false };
+    }
+    const paymentPreference = (ticket.payment_preference || "at_end")
+      .toString()
+      .toLowerCase();
+    if (paymentPreference !== "at_end") {
+      return {
+        code: 400,
+        message: "Este ticket utiliza pagamento por etapa.",
+        success: false,
+      };
     }
 
     const conversation = await Conversation.findByPk(ticket.conversation_id);
@@ -228,6 +239,12 @@ const createTicketDepositPaymentService = async (ticketId, user, payload = {}) =
       boletoDueDate: paymentData?.dueDate,
       attempt,
     });
+
+    try {
+      await updateTicketPaymentStatus(ticket.id);
+    } catch (e) {
+      console.warn("Falha ao atualizar status de pagamento do ticket:", e?.message || e);
+    }
 
     const successMessage =
       method === "PIX"
