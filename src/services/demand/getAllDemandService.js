@@ -19,6 +19,7 @@ const getAllDemandService = async (dataUser) => {
       code: 200,
       message: "Todas as demandas do usuario",
       demand,
+      demands: demand,
       success: true,
     };
   } catch (error) {

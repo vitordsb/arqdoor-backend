@@ -152,7 +152,6 @@ router.get("/images", getAllImagesController);
 router.post(
   "/pdf/:id",
   authToken,
-  uploadPdfController,
   uploadPdf.single("file"),
   uploadPdfController
 );

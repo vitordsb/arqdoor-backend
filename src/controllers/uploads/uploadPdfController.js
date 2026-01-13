@@ -1,4 +1,14 @@
+const path = require("path");
 const uploadPdfService = require("../../services/upload/uploadPdfService");
+
+const normalizePdfPath = (filePath) => {
+  if (!filePath) return "";
+  const normalized = filePath.split(path.sep).join("/");
+  const marker = "/uploads/";
+  const idx = normalized.lastIndexOf(marker);
+  if (idx === -1) return normalized;
+  return normalized.slice(idx + 1);
+};
 
 const uploadPdfController = async (req, res, next) => {
   try {
@@ -10,7 +20,7 @@ const uploadPdfController = async (req, res, next) => {
       // Pegando o id do ticket do parametro
       ticket_id: req.params.id,
       // Se não tiver o req.file, o pdf_path ficara ""
-      pdf_path: req.file ? req.file.path : "",
+      pdf_path: req.file ? normalizePdfPath(req.file.path) : "",
     };
 
     const result = await uploadPdfService(dataUpload, req.user);

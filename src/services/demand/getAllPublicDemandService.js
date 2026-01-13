@@ -9,6 +9,7 @@ const getAllPublicDemandService = async () => {
       code: 200,
       message: "Todas as demandas do usuario",
       demand,
+      demands: demand,
       success: true,
     };
   } catch (error) {

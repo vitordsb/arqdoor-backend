@@ -1,16 +1,14 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const raizDoProjeto = path.join(__dirname, "..", "..", "..");
+const raizDoProjeto = path.join(__dirname, "..", "..");
 
-// busca a pasta uploads na raiz do projeto
 const uploadDir = path.join(raizDoProjeto, "uploads");
+const pdfDir = path.join(uploadDir, "pdfs");
 
-// se a pasta não existir, criar ela
-// if (!fs.existsSync(uploadDir)) {
-//   console.log("não existe essa pasta");
-//   fs.mkdirSync(uploadDir);
-// }
+if (!fs.existsSync(pdfDir)) {
+  fs.mkdirSync(pdfDir, { recursive: true });
+}
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["application/pdf"];
@@ -29,7 +27,7 @@ const fileFilter = (req, file, cb) => {
 // declarar o armazenamento para o multer trabalhar
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/pdfs/"); // pasta aonde ficara salvo
+    cb(null, pdfDir); // pasta aonde ficara salvo
   },
   filename: (req, file, cb) => {
     // Pegando a data para renomear o arquivo
