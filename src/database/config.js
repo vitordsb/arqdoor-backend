@@ -1,5 +1,5 @@
 const { Sequelize } = require("sequelize");
-require("dotenv").config();
+// Não chamamos o dotenv.config() aqui, pois o server.js já o faz no topo.
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -8,37 +8,12 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: "mysql",
+    logging: false, // Desativa os logs de SQL no terminal para ficar mais limpo
+    define: {
+      timestamps: true,
+      underscored: true, // Usa snake_case (created_at) no banco
+    }
   }
 );
-
-const DBAuthenticate = async () => {
-  try {
-    await sequelize.authenticate().then(async () => {
-      console.log("==========================================================");
-      console.log(`Banco de dados conectado com sucesso`);
-      console.log("==========================================================");
-      const enableSync = process.env.ENABLE_DB_SYNC === "true";
-      if (enableSync) {
-        try {
-          await sequelize.sync({ alter: false });
-          console.log("Sincronização de modelos habilitada (ENABLE_DB_SYNC=true)");
-        } catch (syncErr) {
-          console.warn(
-            "Sincronização falhou e foi ignorada (defina ENABLE_DB_SYNC=false para evitar novas tentativas).",
-            syncErr?.message || syncErr
-          );
-        }
-      } else {
-        console.log("Sincronização de modelos desabilitada (defina ENABLE_DB_SYNC=true se precisar rodar sync).");
-      }
-    });
-  } catch (error) {
-    console.log("==========================================================");
-    console.log(`Erro ao conectar no banco de dados ${error}`);
-    console.log("==========================================================");
-  }
-};
-
-DBAuthenticate();
 
 module.exports = sequelize;

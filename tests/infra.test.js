@@ -14,6 +14,16 @@ describe('Fase 1: Testes de Infraestrutura', () => {
     }
   });
 
+  test('INF-05: Deve sincronizar os modelos com o banco de dados com sucesso', async () => {
+    try {
+      // Forçamos o teste a esperar a sincronização
+      await sequelize.sync({ alter: false });
+      expect(true).toBe(true);
+    } catch (error) {
+      throw new Error('Falha na sincronização: ' + error.message);
+    }
+  });
+
   // Teste INF-03: Rota de Documentação
   test('INF-03: Deve carregar a rota de documentação /doc', async () => {
     const response = await request(app).get('/doc');
