@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' });
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -176,22 +176,26 @@ sequelize
       console.warn("[admin] Falha ao garantir usuário admin:", e?.message || e);
     }
 
-    app.listen(PORT, () => {
-      console.log("==========================================");
-      console.log(`Servidor rodando na porta ${PORT}`);
-      console.log("==========================================");
-    });
+    if (process.env.NODE_ENV !== 'test') {
+      app.listen(PORT, () => {
+        console.log("==========================================");
+        console.log(`Servidor rodando na porta ${PORT}`);
+        console.log("==========================================");
+      });
 
-    https
-      .createServer(
-        {
-          cert: fs.readFileSync("src/SSL/code.crt"),
-          key: fs.readFileSync("src/SSL/code.key"),
-        },
-        app
-      )
-      .listen(8081, () => console.log("Servidor Rodando em Https"));
+      https
+        .createServer(
+          {
+            cert: fs.readFileSync("src/SSL/code.crt"),
+            key: fs.readFileSync("src/SSL/code.key"),
+          },
+          app
+        )
+        .listen(8081, () => console.log("Servidor Rodando em Https"));
+    }
   })
   .catch((error) => {
     console.error("Erro na conexão ou sincronização:", error);
   });
+
+module.exports = app;
