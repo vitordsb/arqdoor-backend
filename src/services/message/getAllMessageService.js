@@ -3,6 +3,15 @@ const Message = require("../../models/Message");
 
 const getAllMessageService = async (conversation_id, user) => {
   try {
+    const userId = Number(user?.id);
+    if (!Number.isFinite(userId)) {
+      return {
+        code: 400,
+        message: "Usuário inválido",
+        success: false,
+      };
+    }
+
     // buscar a conversa e validar
     const conversation = await Conversation.findByPk(conversation_id);
 
@@ -16,8 +25,8 @@ const getAllMessageService = async (conversation_id, user) => {
 
     // validar se a conversa envolve o usuario logado
     if (
-      conversation.user1_id !== user.id &&
-      conversation.user2_id !== user.id
+      Number(conversation.user1_id) !== userId &&
+      Number(conversation.user2_id) !== userId
     ) {
       return {
         code: 400,

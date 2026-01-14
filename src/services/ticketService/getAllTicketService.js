@@ -6,6 +6,14 @@ const { updateTicketPaymentStatus } = require("../../utils/updateTicketPaymentSt
 
 const getAllTicketService = async (dataTicket, user) => {
   try {
+    const userId = Number(user?.id);
+    if (!Number.isFinite(userId)) {
+      return {
+        code: 400,
+        message: "Usuário inválido",
+        success: false,
+      };
+    }
 
     // validar se conversation existe
     const conversation = await Conversation.findByPk(dataTicket);
@@ -19,8 +27,8 @@ const getAllTicketService = async (dataTicket, user) => {
 
     // validar se o user logado faz parte da conversa
     if (
-      conversation.user1_id !== user.id &&
-      conversation.user2_id !== user.id
+      Number(conversation.user1_id) !== userId &&
+      Number(conversation.user2_id) !== userId
     ) {
       return {
         code: 400,
