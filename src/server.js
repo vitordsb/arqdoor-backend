@@ -147,7 +147,19 @@ sequelize
     console.log(
       `Sincronizando modelos (alter=${alterSync ? "true" : "false"}) - use migrações para mudanças estruturais`
     );
-    return sequelize.sync({ alter: alterSync });
+    return sequelize.sync({ alter: alterSync }).catch((err) => {
+      const fkDuplicate =
+        err?.parent?.code === "ER_FK_DUP_NAME" ||
+        err?.name === "SequelizeDatabaseError";
+      if (fkDuplicate) {
+        console.warn(
+          "[sync] Detected duplicated FK constraint; skipping sync. Ajuste via migração/manual se necessário:",
+          err?.parent?.sqlMessage || err?.message
+        );
+        return null;
+      }
+      throw err;
+    });
   })
   .then(async () => {
     // garante que o usuário admin exista
