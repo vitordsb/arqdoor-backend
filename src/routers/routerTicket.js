@@ -11,6 +11,7 @@ const getProviderActiveTicketsController = require("../controllers/ticketService
 const updateSignatureTicketValidator = require("../middlewares/validators/step/updateSignatureStepValidator");
 const updateSignatureTicketController = require("../controllers/step/updateSignatureStepController");
 const getTicketStepsController = require("../controllers/ticketService/getTicketStepsController");
+const getTicketPaymentGroupsController = require("../controllers/ticketService/getTicketPaymentGroupsController");
 const router = Router();
 
 /**
@@ -179,6 +180,25 @@ router.delete("/:id", authToken, deleteTicketController);
 
 // router.get("/tickets/:id/steps", authToken, getTicketStepsController); 
 router.get("/:id/steps", authToken, getTicketStepsController);
+
+/**
+ * @swagger
+ * /ticket/{id}/payment-groups:
+ *   get:
+ *     summary: Retorna as etapas agrupadas por grupos de pagamento
+ *     tags: [Ticket]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do ticket
+ *     responses:
+ *       200:
+ *         description: Grupos retornados com sucesso
+ */
+router.get("/:id/payment-groups", authToken, getTicketPaymentGroupsController);
 
 
 

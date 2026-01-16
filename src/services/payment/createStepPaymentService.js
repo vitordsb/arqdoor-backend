@@ -152,6 +152,20 @@ const createStepPaymentService = async (stepId, payload = {}, user) => {
       return { code: 400, message: "O valor da etapa não pode ser menor que R$ 5,00", success: false };
     }
 
+    // verificação de grupo de pagamento
+    if (step.group_id) {
+      const groupCount = await Step.count({
+        where: { ticket_id: ticket.id, group_id: step.group_id },
+      });
+      if (groupCount > 1) {
+        return {
+          code: 400,
+          message: "Esta etapa faz parte de um grupo de pagamento e deve ser paga em conjunto com as outras etapas do grupo.",
+          success: false,
+        };
+      }
+    }
+
     const method = normalizeMethod(payload.method);
 
     const existingPayments = await Payment.findAll({
@@ -168,16 +182,30 @@ const createStepPaymentService = async (stepId, payload = {}, user) => {
       };
     }
 
-    const pendingPayment = existingPayments.find(
-      (p) => (p.method || "PIX") === method && isValidPendingPayment(p, method)
-    );
+    const pendingPayments = existingPayments.filter((p) => isPendingStatus(p.status));
+    let reusablePayment = null;
 
-    if (pendingPayment) {
+    for (const p of pendingPayments) {
+      const isReusable = !reusablePayment && (p.method || "PIX") === method && isValidPendingPayment(p, method);
+
+      if (isReusable) {
+        reusablePayment = p;
+      } else {
+        try {
+          await asaasClient.delete(`/payments/${p.asaas_payment_id}`);
+          await p.update({ status: "CANCELLED", last_event: "CANCELLED_BY_NEW_REQUEST" });
+        } catch (err) {
+          console.warn(`Falha ao cancelar pagamento pendente ${p.id}:`, err.message);
+        }
+      }
+    }
+
+    if (reusablePayment) {
       return {
         code: 200,
         message: "Cobrança pendente já existente",
         success: true,
-        data: serializePayment(pendingPayment, method),
+        data: serializePayment(reusablePayment, method),
       };
     }
 

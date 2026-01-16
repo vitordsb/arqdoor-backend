@@ -145,15 +145,30 @@ const createTicketDepositPaymentService = async (ticketId, user, payload = {}) =
       return { code: 400, message: "O depósito em garantia já está pago para este ticket", success: false };
     }
 
-    const pendingPayment = existingPayments.find(
-      (p) => (p.method || "PIX") === method && isValidPendingPayment(p, method)
-    );
-    if (pendingPayment) {
+    const pendingPayments = existingPayments.filter((p) => isPendingStatus(p.status));
+    let reusablePayment = null;
+
+    for (const p of pendingPayments) {
+      const isReusable = !reusablePayment && (p.method || "PIX") === method && isValidPendingPayment(p, method);
+
+      if (isReusable) {
+        reusablePayment = p;
+      } else {
+        try {
+          await asaasClient.delete(`/payments/${p.asaas_payment_id}`);
+          await p.update({ status: "CANCELLED", last_event: "CANCELLED_BY_NEW_REQUEST" });
+        } catch (err) {
+          console.warn(`Falha ao cancelar pagamento pendente ${p.id}:`, err.message);
+        }
+      }
+    }
+
+    if (reusablePayment) {
       return {
         code: 200,
         message: "Cobrança pendente já existente",
         success: true,
-        data: serializePayment(pendingPayment, method),
+        data: serializePayment(reusablePayment, method),
       };
     }
 

@@ -1,6 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/config");
 const TicketService = require("./TicketService");
+const PaymentGroup = require("./PaymentGroup");
 
 const Step = sequelize.define(
   "Step",
@@ -70,6 +71,15 @@ const Step = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    // campo para agrupar etapas para pagamento agrupado
+    group_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: PaymentGroup,
+        key: "id",
+      },
+    },
   },
   {
     tableName: "Step",
@@ -102,4 +112,9 @@ Step.belongsToMany(Payment, {
   through: PaymentStep,
   foreignKey: "step_id",
   otherKey: "payment_id",
+});
+
+Step.belongsTo(PaymentGroup, {
+  foreignKey: "group_id",
+  as: "paymentGroup",
 });

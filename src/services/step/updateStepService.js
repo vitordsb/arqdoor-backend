@@ -44,11 +44,12 @@ const updateStepService = async (step_id, dataUpdate, user) => {
 
     // title
     // price
-    // para atualizar os campos acima, o ticket e preciso estar em 'pendente'
+    // group_id
+    // para atualizar os campos acima, o ticket é preciso estar em 'pendente'
 
     if (
       ticket.status !== "pendente" &&
-      (dataUpdate.title !== undefined || dataUpdate.price !== undefined)
+      (dataUpdate.title !== undefined || dataUpdate.price !== undefined || dataUpdate.group_id !== undefined)
     ) {
       return {
         code: 400,

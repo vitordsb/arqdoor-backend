@@ -1,5 +1,6 @@
 const Step = require("../../models/Step");
 const TicketService = require("../../models/TicketService");
+const PaymentGroup = require("../../models/PaymentGroup");
 
 const getTicketStepsService = async (ticketId, user) => {
   try {
@@ -14,6 +15,12 @@ const getTicketStepsService = async (ticketId, user) => {
 
     const steps = await Step.findAll({
       where: { ticket_id: ticketId },
+      include: [
+        {
+          model: PaymentGroup,
+          as: "paymentGroup",
+        },
+      ],
       order: [["created_at", "ASC"]],
     });
 

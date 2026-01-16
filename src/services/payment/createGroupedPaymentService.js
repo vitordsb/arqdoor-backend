@@ -5,6 +5,7 @@ const PaymentStep = require("../../models/PaymentStep");
 const PaymentCustomer = require("../../models/PaymentCustomer");
 const asaasClient = require("../../config/asaas");
 const { Op } = require("sequelize");
+const { isPendingStatus } = require("../../utils/asaasStatuses");
 
 const createGroupedPaymentService = async (stepIds, user, options = {}) => {
   try {
@@ -120,7 +121,55 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       };
     }
 
+    // validação de um gp de fases
+    const groupIds = [
+      ...new Set(steps.map((s) => s.group_id).filter((g) => g !== null && g !== undefined)),
+    ];
+
+    if (groupIds.length > 1) {
+      return {
+        code: 400,
+        success: false,
+        message: "Não é permitido agrupar etapas de grupos diferentes na mesma cobrança.",
+      };
+    }
+
+    if (groupIds.length === 1) {
+      const groupId = groupIds[0];
+      const hasUngrouped = steps.some((s) => s.group_id !== groupId);
+      if (hasUngrouped) {
+        return {
+          code: 400,
+          success: false,
+          message: "Não é permitido misturar etapas de um grupo com etapas sem grupo.",
+        };
+      }
+
+      const totalStepsInGroup = await Step.count({ where: { ticket_id: ticketId, group_id: groupId } });
+      if (steps.length !== totalStepsInGroup) {
+        return { code: 400, success: false, message: "É necessário pagar o grupo de etapas completo." };
+      }
+    }
+
     const totalAmount = steps.reduce((sum, step) => sum + Number(step.price), 0);
+
+    const pendingGroupedPayments = await Payment.findAll({
+      where: {
+        ticket_id: ticketId,
+        step_id: null,
+      },
+    });
+
+    for (const p of pendingGroupedPayments) {
+      if (isPendingStatus(p.status)) {
+        try {
+          await asaasClient.delete(`/payments/${p.asaas_payment_id}`);
+          await p.update({ status: "CANCELLED", last_event: "CANCELLED_BY_NEW_REQUEST" });
+        } catch (err) {
+          console.warn(`Falha ao cancelar pagamento agrupado pendente ${p.id}:`, err.message);
+        }
+      }
+    }
 
     const paymentCustomer = await PaymentCustomer.findOne({ where: { user_id: user.id } });
 
