@@ -44,7 +44,7 @@ const Payment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       references: {
-        model: "ServiceProvider",
+        model: ServiceProvider,
         key: "provider_id",
       },
       onDelete: "SET NULL",

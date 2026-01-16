@@ -5,3 +5,4 @@
 node_modules/
 frontend_testes/
 uploads/pdfs/*.pdf
+.env.test
