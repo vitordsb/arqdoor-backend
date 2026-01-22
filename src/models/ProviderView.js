@@ -21,7 +21,7 @@ const ProviderView = sequelize.define(
       allowNull: false,
       references: { model: User, key: "id" },
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

@@ -25,7 +25,7 @@ const PortfolioComment = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: false,
     },
-    createdAt: {
+    created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },

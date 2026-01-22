@@ -72,6 +72,14 @@ const User = db.define(
       allowNull: true,
       defaultValue: null,
     },
+    perfil: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    banner: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "User",

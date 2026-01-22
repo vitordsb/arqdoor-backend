@@ -18,7 +18,7 @@ const TicketAttchment = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    signatureUpdateAt: {
+    signature_update_at: {
       type: DataTypes.DATE,
     },
     pdf_path: {

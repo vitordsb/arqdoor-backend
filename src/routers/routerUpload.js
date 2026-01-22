@@ -2,7 +2,7 @@ const { Router } = require("express");
 const router = Router();
 const multer = require("multer");
 
-const uploadImageController = require("../controllers/uploads/uploadImageController");
+const { uploadImageController, deleteImageController } = require("../controllers/uploads/uploadImageController");
 const authToken = require("../middlewares/validators/authToken");
 const validatorUploadImage = require("../middlewares/validators/upload/validatorUploadImage");
 // const { storage, fileFilter } = require("../config/configMulterImage");
@@ -53,6 +53,35 @@ router.post(
   uploadImage.single("file"),
   uploadImageController
 );
+
+/**
+ * @swagger
+ * /upload/image:
+ *   delete:
+ *     summary: Remove a imagem de perfil ou banner do usuário
+ *     tags: [Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [perfil, banner]
+ *                 example: perfil
+ *     responses:
+ *       200:
+ *         description: Imagem removida com sucesso
+ *       400:
+ *         description: Tipo inválido ou ausente
+ *       404:
+ *         description: Imagem não encontrada
+ */
+router.delete("/image", authToken, deleteImageController);
 
 /**
  * @swagger
