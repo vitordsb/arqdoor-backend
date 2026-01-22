@@ -42,14 +42,19 @@ const updateStepService = async (step_id, dataUpdate, user) => {
       };
     }
 
+    if (dataUpdate.groupId !== undefined) {
+      dataUpdate.group_id = dataUpdate.groupId;
+    }
+
     // title
     // price
-    // group_id
     // para atualizar os campos acima, o ticket é preciso estar em 'pendente'
 
     if (
       ticket.status !== "pendente" &&
-      (dataUpdate.title !== undefined || dataUpdate.price !== undefined || dataUpdate.group_id !== undefined)
+      ((dataUpdate.title !== undefined && dataUpdate.title !== step.title) ||
+        (dataUpdate.price !== undefined &&
+          Number(dataUpdate.price) !== Number(step.price)))
     ) {
       return {
         code: 400,

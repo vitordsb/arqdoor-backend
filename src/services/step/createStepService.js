@@ -50,6 +50,10 @@ const createStepService = async (dataStep, user) => {
       };
     }
 
+    if (dataStep.groupId !== undefined) {
+      dataStep.group_id = dataStep.groupId;
+    }
+
     const step = await Step.create(dataStep);
 
     // atualizar o total_price e o total_date do ticket

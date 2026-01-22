@@ -28,7 +28,8 @@ const ensureEndAfterStart = (value, helpers) => {
 
 const updateStepValidator = async (req, res, next) => {
   try {
-    const { title, price, start_date, end_date } = req.body || {};
+    const { title, price, start_date, end_date, group_id, groupId } =
+      req.body || {};
 
     const schema = Joi.object({
       title: Joi.string().min(3).max(100),
@@ -36,12 +37,16 @@ const updateStepValidator = async (req, res, next) => {
       price: Joi.number().min(0),
       start_date: Joi.date().custom(allowStartToday),
       end_date: Joi.date().custom(ensureEndAfterStart),
+      group_id: Joi.number().integer().allow(null),
+      groupId: Joi.number().integer().allow(null),
     });
     const { error, value } = schema.validate({
       title,
       price,
       start_date,
       end_date,
+      group_id,
+      groupId,
     });
 
     if (error) {
