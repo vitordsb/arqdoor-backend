@@ -2,7 +2,7 @@ const Step = require("../../models/Step");
 const TicketService = require("../../models/TicketService");
 const Payment = require("../../models/Payment");
 const PaymentStep = require("../../models/PaymentStep");
-const PaymentCustomer = require("../../models/PaymentCustomer");
+const ensureAsaasCustomerService = require("./ensureAsaasCustomerService");
 const asaasClient = require("../../config/asaas");
 const { Op } = require("sequelize");
 const { isPendingStatus } = require("../../utils/asaasStatuses");
@@ -171,9 +171,20 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       }
     }
 
-    const paymentCustomer = await PaymentCustomer.findOne({ where: { user_id: user.id } });
+    let paymentCustomer;
+    try {
+      paymentCustomer = await ensureAsaasCustomerService(user.id);
+    } catch (err) {
+      return {
+        code: 400,
+        success: false,
+        message:
+          err?.message ||
+          "Cliente não possui cadastro no Asaas. Verifique se o CPF/CNPJ está cadastrado.",
+      };
+    }
 
-    if (!paymentCustomer || !paymentCustomer.asaas_customer_id) {
+    if (!paymentCustomer?.asaas_customer_id) {
       return {
         code: 400,
         success: false,
@@ -257,3 +268,5 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
 };
 
 module.exports = createGroupedPaymentService;
+
+

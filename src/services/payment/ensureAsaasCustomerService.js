@@ -8,7 +8,7 @@ const sanitizeDocument = (value) =>
 const ensureAsaasCustomerService = async (userId) => {
   const existing = await PaymentCustomer.findOne({ where: { user_id: userId } });
 
-  if (existing) {
+  if (existing && existing.asaas_customer_id) {
     return existing;
   }
 
@@ -36,15 +36,23 @@ const ensureAsaasCustomerService = async (userId) => {
   const response = await asaasClient.post("/customers", payload);
   const customer = response.data;
 
-  const saved = await PaymentCustomer.create({
+  if (existing) {
+    await existing.update({
+      asaas_customer_id: customer.id,
+      document_type: documentType,
+      document_value: document,
+      payload: JSON.stringify(customer),
+    });
+    return existing;
+  }
+
+  return PaymentCustomer.create({
     user_id: user.id,
     asaas_customer_id: customer.id,
     document_type: documentType,
     document_value: document,
     payload: JSON.stringify(customer),
   });
-
-  return saved;
 };
 
 module.exports = ensureAsaasCustomerService;
