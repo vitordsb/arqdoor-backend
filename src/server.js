@@ -223,15 +223,22 @@ sequelize
         console.log("==========================================");
       });
 
+      const sslCertPath = "src/SSL/code.crt";
+      const sslKeyPath = "src/SSL/code.key";
+
+      if (fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
       https
         .createServer(
           {
-            cert: fs.readFileSync("src/SSL/code.crt"),
-            key: fs.readFileSync("src/SSL/code.key"),
-          },
-          app
-        )
-        .listen(8081, () => console.log("Servidor Rodando em Https"));
+              cert: fs.readFileSync(sslCertPath),
+              key: fs.readFileSync(sslKeyPath),
+            },
+            app
+          )
+        .listen(8081, () => console.log("Servidor Rodando em Https (8081)"));
+    } else {
+      console.log("Certificados SSL não encontrados. Servidor HTTPS não iniciado.");
+    }
     }
   })
   .catch((error) => {
