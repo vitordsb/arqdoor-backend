@@ -80,4 +80,8 @@ const TicketService = sequelize.define(
   }
 );
 
+TicketService.belongsTo(Conversation, {
+  foreignKey: "conversation_id",
+});
+
 module.exports = TicketService;
