@@ -54,9 +54,25 @@ const updateTicketPaymentStatus = async (ticketId) => {
   if (!status) return null;
   const ticket = await TicketService.findByPk(ticketId);
   if (!ticket) return null;
+
+  const updateData = {};
+  let needsUpdate = false;
+
   if (ticket.payment_status !== status) {
-    await ticket.update({ payment_status: status });
+    updateData.payment_status = status;
+    needsUpdate = true;
   }
+
+  // Registrar timestamp quando o depósito é pago (trabalho efetivamente começa)
+  if (status === "deposit_paid" && !ticket.work_started_at) {
+    updateData.work_started_at = new Date();
+    needsUpdate = true;
+  }
+
+  if (needsUpdate) {
+    await ticket.update(updateData);
+  }
+
   return status;
 };
 

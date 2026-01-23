@@ -118,7 +118,13 @@ const updateStatusStepService = async (step_id, dataUpdate, user) => {
       }
     }
 
-    await step.update({ status: dataUpdate });
+    // Registrar timestamp quando a fase é iniciada
+    const updateData = { status: dataUpdate };
+    if (normalizedStatus === "em andamento" && !step.started_at) {
+      updateData.started_at = new Date();
+    }
+
+    await step.update(updateData);
 
     await updateTicketTotal(ticket);
 

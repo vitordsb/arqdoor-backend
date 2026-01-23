@@ -85,6 +85,11 @@ const Step = sequelize.define(
         key: "id",
       },
     },
+    // Timestamp de quando o prestador iniciou efetivamente a fase
+    started_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "Step",

@@ -72,6 +72,11 @@ const TicketService = sequelize.define(
       defaultValue: false,
       allowNull: false,
     },
+    // Timestamp de quando o trabalho efetivamente começou (após pagamento do depósito)
+    work_started_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "TicketService",
