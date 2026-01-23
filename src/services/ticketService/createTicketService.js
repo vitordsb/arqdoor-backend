@@ -29,9 +29,10 @@ const createTicketService = async (data, user) => {
 
     // validar se o usuario logado e realmente um provider
     if (user.type !== "prestador") {
+      console.log('createTicketService check failed. User type:', user.type); // Log for backend view
       return {
         code: 400,
-        message: "Apenas usuarios prestadores podem criar um ticket de serviço",
+        message: `Apenas usuarios prestadores podem criar um ticket de serviço. Tipo atual: ${user.type}`,
         success: false,
       };
     }
