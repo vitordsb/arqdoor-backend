@@ -138,22 +138,3 @@ Step.beforeUpdate((step, options) => {
 });
 
 module.exports = Step;
-
-const Payment = require("./Payment");
-const PaymentStep = require("./PaymentStep");
-
-Step.belongsToMany(Payment, {
-  through: PaymentStep,
-  foreignKey: "step_id",
-  otherKey: "payment_id",
-});
-
-Step.belongsTo(PaymentGroup, {
-  foreignKey: "group_id",
-  as: "paymentGroup",
-});
-
-Step.belongsTo(TicketService, {
-  foreignKey: "ticket_id",
-  as: "TicketService",
-});

@@ -160,6 +160,10 @@ sequelize
   .authenticate()
   .then(() => {
     console.log("Conexão com o banco estabelecida");
+
+    // Inicializar todas as associações entre models
+    require("./models/associations");
+
     // mantém o schema alinhado com os models sem precisar rodar migrações manuais
     // Evitamos alterações automáticas em produção para não criar índices duplicados (limite de 64 no MySQL)
     const enableSync = process.env.ENABLE_DB_SYNC === "true";
