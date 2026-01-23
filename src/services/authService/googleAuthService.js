@@ -130,13 +130,14 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
 
   if (existingUser) {
     // Se veio pelo fluxo de registro mas já existe, oriente a fazer login
-    if (mode === "register") {
-      return {
-        code: 409,
-        message: "Usuário já conectado com Google, por favor faça login.",
-        success: false,
-      };
-    }
+    // REMOVIDO: Isso estava bloqueando login de usuários Google existentes
+    // if (mode === "register") {
+    //   return {
+    //     code: 409,
+    //     message: "Usuário já conectado com Google, por favor faça login.",
+    //     success: false,
+    //   };
+    // }
 
     if (existingUser.provider === "local") {
       return {
