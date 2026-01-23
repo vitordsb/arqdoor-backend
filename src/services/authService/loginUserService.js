@@ -16,6 +16,17 @@ const loginUserService = async (dataUser) => {
       };
     }
 
+    if (user.provider === "google") {
+      return {
+        code: 403,
+        error: {
+          message:
+            "Este usuário deve fazer login via Google.",
+        },
+        success: false,
+      };
+    }
+
     // discriptografar a senha e validar
     const passwordDecode = await bcrypt.compareSync(
       dataUser.password,

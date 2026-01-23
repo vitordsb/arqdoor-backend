@@ -138,6 +138,14 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
       };
     }
 
+    if (existingUser.provider === "local") {
+      return {
+        code: 403,
+        message: "Este email foi registrado manualmente. Por favor, faça login com sua senha.",
+        success: false,
+      };
+    }
+
     if (
       existingUser.signature_password_set === null ||
       existingUser.signature_password_set === undefined
@@ -178,6 +186,7 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
     is_email_verified: true,
     perfil_completo: false,
     signature_password_set: false,
+    provider: "google",
   });
 
   if (!created?.success) {

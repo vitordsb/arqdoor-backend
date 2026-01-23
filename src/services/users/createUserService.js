@@ -85,6 +85,7 @@ const createUserService = async (dataUser) => {
       {
         ...dataUser,
         signature_password_set: signaturePasswordSet,
+        provider: dataUser.provider || "local",
       },
       { transaction: t }
     );

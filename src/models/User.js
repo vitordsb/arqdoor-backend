@@ -55,6 +55,11 @@ const User = db.define(
       allowNull: false,
     },
 
+    provider: {
+      type: DataTypes.ENUM("local", "google"),
+      defaultValue: "local",
+    },
+
     termos_aceitos: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

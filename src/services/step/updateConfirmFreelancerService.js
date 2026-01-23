@@ -11,17 +11,22 @@ const dayjs = require("dayjs");
 
 const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
   try {
+    console.log(`[DEBUG] updateConfirmFreelancerService started. StepID: ${step_id}, UserID: ${user?.id}`);
+
     const step = await Step.findByPk(step_id);
     if (!step) {
+      console.log("[DEBUG] Step not found");
       return {
         code: 404,
         message: "Step não encontrado",
         success: false,
       };
     }
+    console.log(`[DEBUG] Step found: ${step.id}, TicketID: ${step.ticket_id}`);
 
     const ticket = await TicketService.findByPk(step.ticket_id);
     if (!ticket) {
+      console.log("[DEBUG] Ticket not found");
       return {
         code: 404,
         message: "Ticket não encontrado",
@@ -31,14 +36,17 @@ const updateConfirmFreelancerService = async (step_id, dataUpdate, user) => {
 
     const userProvider = await ServiceProvider.findByPk(ticket.provider_id);
     if (!userProvider) {
+      console.log("[DEBUG] UserProvider not found");
       return {
         code: 404,
         message: "UserProvider não encontrado",
         success: false,
       };
     }
+    console.log(`[DEBUG] UserProvider found: ${userProvider.id}, UserProvider.user_id: ${userProvider.user_id}`);
 
     if (userProvider.user_id !== user.id) {
+      console.log(`[DEBUG] Access denied. ProviderUser: ${userProvider.user_id} !== RequestUser: ${user.id}`);
       return {
         code: 400,
         message: "Acesso negado, o usuario logado não e dono do ticket",

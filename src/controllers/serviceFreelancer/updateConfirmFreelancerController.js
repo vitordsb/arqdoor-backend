@@ -14,7 +14,7 @@ const updateConfirmFreelancerController = async (req, res) => {
     );
     return res.status(result.code).json(result);
   } catch (error) {
-    console.error(error);
+    console.error("Error in updateConfirmFreelancerController:", error);
     return res.status(500).json({
       code: 500,
       error: {
