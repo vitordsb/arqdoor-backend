@@ -137,14 +137,33 @@ const funcValidENV = async () => {
 };
 funcValidENV();
 
+// [TEMP] Endpoint to fix DB schema issues remotely
+app.get("/fix-db", async (req, res) => {
+  try {
+    const [results] = await sequelize.query("SHOW COLUMNS FROM User AND LIKE 'provider'");
+    if (results.length === 0) {
+      await sequelize.query("ALTER TABLE User ADD COLUMN provider ENUM('local', 'google') DEFAULT 'local'");
+      return res.send("Column 'provider' added successfully.");
+    }
+    return res.send("Column 'provider' already exists.");
+  } catch (error) {
+    console.error("Fix DB Error:", error);
+    // Ignore error if column exists (duplicate column name)
+    if (error.original && error.original.code === 'ER_DUP_FIELDNAME') {
+      return res.send("Column 'provider' already exists (caught error).");
+    }
+    return res.status(500).send("Error fixing DB: " + error.message);
+  }
+});
+
 sequelize
   .authenticate()
   .then(() => {
     console.log("Conexão com o banco estabelecida");
     // mantém o schema alinhado com os models sem precisar rodar migrações manuais
     // Evitamos alterações automáticas em produção para não criar índices duplicados (limite de 64 no MySQL)
-    const enableSync = process.env.ENABLE_DB_SYNC === "true" || true; // FORCE TRUE TEMPORARILY
-    const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true" || true; // FORCE TRUE TEMPORARILY
+    const enableSync = process.env.ENABLE_DB_SYNC === "true";
+    const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true";
     if (!enableSync) {
       console.log("Sincronização automática desabilitada (ENABLE_DB_SYNC=false)");
       return null;
