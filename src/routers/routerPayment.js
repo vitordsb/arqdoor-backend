@@ -8,6 +8,7 @@ const handleAsaasWebhookController = require("../controllers/payment/handleAsaas
 const refreshTicketPaymentController = require("../controllers/payment/refreshTicketPaymentController");
 const refreshStepPaymentController = require("../controllers/payment/refreshStepPaymentController");
 const authToken = require("../middlewares/validators/authToken");
+const { checkStepOwnership, checkTicketOwnership } = require("../middlewares/checkOwnership");
 const createStepPaymentValidator = require("../middlewares/validators/payment/createStepPaymentValidator");
 const stepIdParamValidator = require("../middlewares/validators/payment/stepIdParamValidator");
 const ticketIdParamValidator = require("../middlewares/validators/payment/ticketIdParamValidator");
@@ -91,6 +92,7 @@ router.post(
   "/steps/:stepId",
   authToken,
   stepIdParamValidator,
+  checkStepOwnership,
   createStepPaymentValidator,
   createStepPaymentController
 );
@@ -157,6 +159,7 @@ router.get(
   "/steps/:stepId",
   authToken,
   stepIdParamValidator,
+  checkStepOwnership,
   getStepPaymentsController
 );
 
@@ -164,6 +167,7 @@ router.get(
   "/steps/:stepId/refresh",
   authToken,
   stepIdParamValidator,
+  checkStepOwnership,
   refreshStepPaymentController
 );
 
@@ -196,6 +200,7 @@ router.post(
   "/tickets/:ticketId",
   authToken,
   ticketIdParamValidator,
+  checkTicketOwnership,
   createStepPaymentValidator,
   createTicketDepositPaymentController
 );
@@ -204,6 +209,7 @@ router.get(
   "/tickets/:ticketId/refresh",
   authToken,
   ticketIdParamValidator,
+  checkTicketOwnership,
   refreshTicketPaymentController
 );
 

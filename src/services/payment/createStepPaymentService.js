@@ -2,10 +2,13 @@ const dayjs = require("dayjs");
 const asaasClient = require("../../config/asaas");
 const Conversation = require("../../models/Conversation");
 const Payment = require("../../models/Payment");
+const PaymentRequest = require("../../models/PaymentRequest");
 const Step = require("../../models/Step");
 const TicketService = require("../../models/TicketService");
+const sequelize = require("../../database/config");
 const ensureAsaasCustomerService = require("./ensureAsaasCustomerService");
 const { isPaidStatus, isPendingStatus } = require("../../utils/asaasStatuses");
+const { ConflictError } = require("../../utils/AppError");
 
 const EXPIRATION_MINUTES = Number(process.env.ASAAS_PIX_EXPIRATION_MINUTES || 60);
 const BOLETO_DAYS_TO_DUE = Number(process.env.ASAAS_BOLETO_DAYS_TO_DUE || 3);
@@ -74,7 +77,30 @@ const serializePayment = (payment, method, extras = {}) => {
   return base;
 };
 
-const createStepPaymentService = async (stepId, payload = {}, user) => {
+const createStepPaymentService = async (stepId, payload = {}, user, idempotencyKey = null) => {
+  // ===== IDEMPOTÊNCIA: Verificar se já existe requisição com esta chave =====
+  if (idempotencyKey) {
+    const existingRequest = await PaymentRequest.findOne({
+      where: { idempotency_key: idempotencyKey }
+    });
+
+    if (existingRequest) {
+      if (existingRequest.status === 'completed') {
+        console.log(`[createStepPaymentService] Idempotency hit: ${idempotencyKey}`);
+        return JSON.parse(existingRequest.response);
+      }
+
+      if (existingRequest.status === 'processing') {
+        throw new ConflictError('Requisição já está sendo processada. Aguarde alguns segundos.');
+      }
+
+      if (existingRequest.status === 'failed') {
+        // Permitir retry em caso de falha anterior
+        console.log(`[createStepPaymentService] Retrying failed request: ${idempotencyKey}`);
+      }
+    }
+  }
+
   try {
     const step = await Step.findByPk(stepId);
     if (!step) {
@@ -311,14 +337,49 @@ const createStepPaymentService = async (stepId, payload = {}, user) => {
           ? "Boleto gerado com sucesso"
           : "Link para pagamento com cartão gerado";
 
-    return {
+    const result = {
       code: 201,
       message: successMessage,
       success: true,
       data,
     };
+
+    // ===== IDEMPOTÊNCIA: Salvar resposta bem-sucedida =====
+    if (idempotencyKey) {
+      try {
+        await PaymentRequest.upsert({
+          idempotency_key: idempotencyKey,
+          step_id: stepId,
+          user_id: user.id,
+          status: 'completed',
+          response: JSON.stringify(result)
+        });
+        console.log(`[createStepPaymentService] Idempotency saved: ${idempotencyKey}`);
+      } catch (upsertError) {
+        console.error('[createStepPaymentService] Erro ao salvar idempotency:', upsertError);
+        // Não falhar a requisição por erro de cache
+      }
+    }
+
+    return result;
   } catch (error) {
     console.error("[createStepPaymentService] erro ao criar pagamento:", error?.response?.data || error);
+
+    // ===== IDEMPOTÊNCIA: Registrar falha =====
+    if (idempotencyKey) {
+      try {
+        await PaymentRequest.upsert({
+          idempotency_key: idempotencyKey,
+          step_id: stepId,
+          user_id: user.id,
+          status: 'failed',
+          error_message: error?.message || 'Erro desconhecido'
+        });
+      } catch (upsertError) {
+        console.error('[createStepPaymentService] Erro ao salvar falha de idempotency:', upsertError);
+      }
+    }
+
     const message =
       error?.response?.data?.message ||
       (Array.isArray(error?.response?.data?.errors) && error.response.data.errors.length

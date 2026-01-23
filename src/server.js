@@ -115,6 +115,11 @@ app.use(
 
 app.use("/doc", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(router);
+
+// ===== MIDDLEWARE DE ERRO GLOBAL (deve ser o último) =====
+const errorHandler = require("./middlewares/errorHandler");
+app.use(errorHandler);
+
 app.use("/", (req, res) => {
   res.message =
     "Essa não é uma rota válida, por favor verifique a documentação";

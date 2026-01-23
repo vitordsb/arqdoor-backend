@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const createStepController = require("../controllers/step/createStepController");
 const authToken = require("../middlewares/validators/authToken");
+const { checkStepOwnership } = require("../middlewares/checkOwnership");
 const createStepValidator = require("../middlewares/validators/step/createStepValidator");
 const getAllStepController = require("../controllers/step/getAllStepController");
 const updateStepValidator = require("../middlewares/validators/step/updateStepValidator");
@@ -222,7 +223,7 @@ router.get("/:id", authToken, getAllStepController);
  */
 
 
-router.put("/:id", authToken, updateStepValidator, updateStepController);
+router.put("/:id", authToken, checkStepOwnership, updateStepValidator, updateStepController);
 
 /**
  * @swagger
@@ -257,7 +258,7 @@ router.put("/:id", authToken, updateStepValidator, updateStepController);
  *         description: Step não encontrado
  */
 
-router.delete("/:id", authToken, deleteStepController);
+router.delete("/:id", authToken, checkStepOwnership, deleteStepController);
 
 /**
  * @swagger
@@ -297,7 +298,7 @@ router.delete("/:id", authToken, deleteStepController);
  *         description: Step não encontrado
  */
 
-router.patch("/:id", authToken, updateStatusStepController);
+router.patch("/:id", authToken, checkStepOwnership, updateStatusStepController);
 
 /**
  * @swagger
@@ -348,6 +349,7 @@ router.patch("/:id", authToken, updateStatusStepController);
 router.patch(
   "/signature/:id",
   authToken,
+  checkStepOwnership,
   updateSignatureStepValidator,
   updateSignatureStepController
 );
@@ -424,6 +426,7 @@ router.patch(
 router.patch(
   "/confirmfreelancer/:id",
   authToken,
+  checkStepOwnership,
   updateConfirmFreelancerValidator,
   updateConfirmFreelancerController
 );
