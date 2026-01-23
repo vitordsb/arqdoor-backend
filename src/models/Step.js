@@ -155,4 +155,5 @@ Step.belongsTo(PaymentGroup, {
 
 Step.belongsTo(TicketService, {
   foreignKey: "ticket_id",
+  as: "TicketService",
 });
