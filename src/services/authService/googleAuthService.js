@@ -147,6 +147,11 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
       };
     }
 
+    // Se o provider é NULL (usuário legado), atualizar para 'google'
+    if (!existingUser.provider || existingUser.provider === null) {
+      await existingUser.update({ provider: "google" });
+    }
+
     if (
       existingUser.signature_password_set === null ||
       existingUser.signature_password_set === undefined
