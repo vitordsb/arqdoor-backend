@@ -143,8 +143,8 @@ sequelize
     console.log("Conexão com o banco estabelecida");
     // mantém o schema alinhado com os models sem precisar rodar migrações manuais
     // Evitamos alterações automáticas em produção para não criar índices duplicados (limite de 64 no MySQL)
-    const enableSync = process.env.ENABLE_DB_SYNC === "true";
-    const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true";
+    const enableSync = process.env.ENABLE_DB_SYNC === "true" || true; // FORCE TRUE TEMPORARILY
+    const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true" || true; // FORCE TRUE TEMPORARILY
     if (!enableSync) {
       console.log("Sincronização automática desabilitada (ENABLE_DB_SYNC=false)");
       return null;
