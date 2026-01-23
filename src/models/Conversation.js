@@ -33,4 +33,10 @@ const Conversation = db.define("Conversation", {
   },
 });
 
+const TicketService = require("./TicketService");
+
+Conversation.hasMany(TicketService, {
+  foreignKey: "conversation_id",
+});
+
 module.exports = Conversation;
