@@ -7,7 +7,7 @@ const updateInviteValidator = async (req, res, next) => {
     const schema = Joi.object({
       title: Joi.string().max(120).allow("", null),
       description: Joi.string().max(2000).allow("", null),
-      payment_preference: Joi.string().valid("per_step", "at_end"),
+      payment_preference: Joi.string().valid("per_step", "at_end", "custom"),
       steps: Joi.any(),
       status: Joi.string().valid("cancelled"),
     });

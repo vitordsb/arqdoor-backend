@@ -7,7 +7,7 @@ const createInviteValidator = async (req, res, next) => {
     const schema = Joi.object({
       title: Joi.string().max(120).allow("", null),
       description: Joi.string().max(2000).allow("", null),
-      payment_preference: Joi.string().valid("per_step", "at_end").optional(),
+      payment_preference: Joi.string().valid("per_step", "at_end", "custom").optional(),
       steps: Joi.any().required(),
     });
 
