@@ -3,6 +3,8 @@ const createStepPaymentController = require("../controllers/payment/createStepPa
 const createGroupedPaymentController = require("../controllers/payment/createGroupedPaymentController");
 const createPaymentController = require("../controllers/payment/createPaymentController");
 const createTicketDepositPaymentController = require("../controllers/payment/createTicketDepositPaymentController");
+const createGroupPaymentController = require("../controllers/payment/createGroupPaymentController");
+const getNextPayableGroupController = require("../controllers/payment/getNextPayableGroupController");
 const getStepPaymentsController = require("../controllers/payment/getStepPaymentsController");
 const handleAsaasWebhookController = require("../controllers/payment/handleAsaasWebhookController");
 const refreshTicketPaymentController = require("../controllers/payment/refreshTicketPaymentController");
@@ -230,5 +232,82 @@ router.get(
  *         description: Webhook processado
  */
 router.post("/webhook", handleAsaasWebhookController);
+
+/**
+ * @swagger
+ * /payments/groups/{groupId}:
+ *   post:
+ *     summary: Gera cobrança para um grupo completo de etapas
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID do grupo de pagamento
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               method:
+ *                 type: string
+ *                 enum: [PIX, BOLETO, CREDIT_CARD, DEBIT_CARD]
+ *                 description: Método de pagamento
+ *               description:
+ *                 type: string
+ *                 description: Descrição personalizada do pagamento
+ *     responses:
+ *       201:
+ *         description: Cobrança de grupo criada com sucesso
+ *       400:
+ *         description: Dados inválidos ou grupo não elegível
+ *       403:
+ *         description: Usuário sem permissão
+ *       404:
+ *         description: Grupo não encontrado
+ */
+router.post(
+  "/groups/:groupId",
+  authToken,
+  createStepPaymentValidator,
+  createGroupPaymentController
+);
+
+/**
+ * @swagger
+ * /payments/tickets/{ticketId}/next-group:
+ *   get:
+ *     summary: Retorna o próximo grupo de pagamento disponível para um ticket
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID do ticket
+ *     responses:
+ *       200:
+ *         description: Próximo grupo retornado com sucesso
+ *       400:
+ *         description: Ticket não usa modo personalizado
+ *       404:
+ *         description: Ticket não encontrado
+ */
+router.get(
+  "/tickets/:ticketId/next-group",
+  authToken,
+  ticketIdParamValidator,
+  checkTicketOwnership,
+  getNextPayableGroupController
+);
 
 module.exports = router;
