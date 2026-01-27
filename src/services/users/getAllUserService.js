@@ -2,9 +2,18 @@
 const User = require("../../models/User");
 const LocationUser = require("../../models/LocationUser");
 
+const { Op } = require("sequelize");
+
 const getAllUserService = async () => {
+  const adminEmail = process.env.ADMIN_EMAIL || "arqdoor@admin.com.br";
+
   try {
     const users = await User.findAll({
+      where: {
+        email: {
+          [Op.ne]: adminEmail,
+        },
+      },
       include: [
         {
           model: LocationUser,
