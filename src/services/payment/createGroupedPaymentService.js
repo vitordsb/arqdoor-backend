@@ -194,9 +194,18 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
 
     const { method = "PIX", description } = options;
 
+    let billingType = method;
+    if (method === "CREDIT_CARD" || method === "DEBIT_CARD") {
+      billingType = "UNDEFINED";
+    } else if (method === "PIX") {
+      billingType = "PIX";
+    } else if (method === "BOLETO") {
+      billingType = "BOLETO";
+    }
+
     const paymentPayload = {
       customer: paymentCustomer.asaas_customer_id,
-      billingType: method,
+      billingType,
       value: totalAmount,
       dueDate: new Date().toISOString().split("T")[0], // Vence hoje
       description: description || `Pagamento referente a ${steps.length} etapas do Ticket #${ticketId}`,
