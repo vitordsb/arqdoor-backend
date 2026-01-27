@@ -3,6 +3,7 @@ const { Op } = require("sequelize");
 const Message = require("../../models/Message");
 const getAllConversationService = async (user) => {
   try {
+    // console.log(`[DEBUG] getAllConversation for user: ${user.id}`);
     // buscar todas as conversas do usuario logado
     const conversations = await Conversation.findAll({
       where: {
@@ -21,6 +22,7 @@ const getAllConversationService = async (user) => {
             read: false,
           },
         });
+        // console.log(`[DEBUG] Conv ${plainConv.conversation_id}: unread=${unreadCount}`);
         plainConv.unread_count = unreadCount;
         return plainConv;
       })

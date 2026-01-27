@@ -29,7 +29,9 @@ const createMessageService = async (data, user) => {
 
     data.sender_id = user.id;
     // criar mensagem
+    // criar mensagem
     const message = await Message.create(data);
+    console.log(`[DEBUG] Message created: id=${message.message_id}, conv=${message.conversation_id}, read=${message.read}`);
 
     return {
       code: 200,
