@@ -25,6 +25,7 @@ const Message = db.define("Message", {
       key: "id",
     },
   },
+  content: {
     type: DataTypes.TEXT,
     allowNull: false,
   },
