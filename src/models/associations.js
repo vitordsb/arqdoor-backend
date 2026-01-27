@@ -11,9 +11,18 @@ const ServiceProvider = require('./ServiceProvider');
 const Payment = require('./Payment');
 const PaymentStep = require('./PaymentStep');
 const PaymentGroup = require('./PaymentGroup');
+const LocationUser = require('./LocationUser');
 
 // User associations
-// (já definidas no próprio User.js se houver)
+User.hasOne(LocationUser, {
+  foreignKey: 'user_id',
+  as: 'LocationUser'
+});
+
+LocationUser.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
 
 // Conversation associations
 Conversation.hasMany(TicketService, {
@@ -64,5 +73,7 @@ module.exports = {
   ServiceProvider,
   Payment,
   PaymentStep,
-  PaymentGroup
+  PaymentStep,
+  PaymentGroup,
+  LocationUser
 };
