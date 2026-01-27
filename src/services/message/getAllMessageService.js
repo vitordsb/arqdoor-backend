@@ -1,5 +1,6 @@
 const Conversation = require("../../models/Conversation");
 const Message = require("../../models/Message");
+const { Op } = require("sequelize");
 
 const getAllMessageService = async (conversation_id, user) => {
   try {
@@ -35,12 +36,24 @@ const getAllMessageService = async (conversation_id, user) => {
       };
     }
 
-    // pegar todas as mensagens da conversa
+    // Pegar todas as mensagens da conversa
     const messages = await Message.findAll({
       where: {
         conversation_id: conversation.conversation_id,
       },
     });
+
+    // Marcar como lida as mensagens que não são minhas
+    await Message.update(
+      { read: true },
+      {
+        where: {
+          conversation_id: conversation.conversation_id,
+          sender_id: { [Op.ne]: userId },
+          read: false,
+        },
+      }
+    );
 
     return {
       code: 200,

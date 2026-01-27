@@ -25,10 +25,14 @@ const Message = db.define("Message", {
       key: "id",
     },
   },
-  content: {
     type: DataTypes.TEXT,
     allowNull: false,
   },
+  read: {
+  type: DataTypes.BOOLEAN,
+  allowNull: false,
+  defaultValue: false,
+},
 });
 
 module.exports = Message;
