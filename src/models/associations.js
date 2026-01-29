@@ -76,5 +76,6 @@ module.exports = {
   PaymentStep,
   PaymentGroup,
   LocationUser,
-  Demand
+  Demand,
+  GhostInvite
 };

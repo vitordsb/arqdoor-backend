@@ -1,4 +1,4 @@
-const { GhostInvite } = require('./src/models/associations');
+const GhostInvite = require('./src/models/GhostInvite');
 const sequelize = require('./src/database/config');
 
 async function fixSchema() {
