@@ -46,7 +46,7 @@ const envCorsOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedCorsOrigins = envCorsOrigins.length > 0 ? envCorsOrigins : defaultCorsOrigins;
+const allowedCorsOrigins = [...new Set([...defaultCorsOrigins, ...envCorsOrigins])];
 const allowAllCors = process.env.CORS_ALLOW_ALL === "true" || allowedCorsOrigins.includes("*");
 const allowSubdomains = process.env.CORS_ALLOW_SUBDOMAINS === "true";
 const corsBaseDomain = (process.env.CORS_BASE_DOMAIN || "").trim();
