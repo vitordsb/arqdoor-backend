@@ -13,6 +13,7 @@ const PaymentStep = require('./PaymentStep');
 const PaymentGroup = require('./PaymentGroup');
 const LocationUser = require('./LocationUser');
 const Demand = require('./Demand');
+const GhostInvite = require('./GhostInvite');
 
 // User associations
 User.hasOne(LocationUser, {
