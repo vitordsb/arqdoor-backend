@@ -65,6 +65,8 @@ const normalizeInviteSteps = (rawSteps) => {
       price,
       start_date: startDate,
       end_date: endDate,
+      group_id: step.group_id || step.payment_group_id || null,
+      payment_group_id: step.payment_group_id || step.group_id || null, 
     });
   }
 

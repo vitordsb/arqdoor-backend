@@ -12,6 +12,7 @@ const Payment = require('./Payment');
 const PaymentStep = require('./PaymentStep');
 const PaymentGroup = require('./PaymentGroup');
 const LocationUser = require('./LocationUser');
+const Demand = require('./Demand');
 
 // User associations
 User.hasOne(LocationUser, {
@@ -73,7 +74,7 @@ module.exports = {
   ServiceProvider,
   Payment,
   PaymentStep,
-  PaymentStep,
   PaymentGroup,
-  LocationUser
+  LocationUser,
+  Demand
 };

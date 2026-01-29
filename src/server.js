@@ -156,67 +156,67 @@ app.get("/fix-db", async (req, res) => {
   }
 });
 
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log("Conexão com o banco estabelecida");
+if (require.main === module) {
+  sequelize
+    .authenticate()
+    .then(() => {
+      console.log("Conexão com o banco estabelecida");
 
-    // Inicializar todas as associações entre models
-    require("./models/associations");
+      // Inicializar todas as associações entre models
+      require("./models/associations");
 
-    // mantém o schema alinhado com os models sem precisar rodar migrações manuais
-    // Evitamos alterações automáticas em produção para não criar índices duplicados (limite de 64 no MySQL)
-    const enableSync = process.env.ENABLE_DB_SYNC === "true";
-    const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true";
-    if (!enableSync) {
-      console.log("Sincronização automática desabilitada (ENABLE_DB_SYNC=false)");
-      return null;
-    }
-    console.log(
-      `Sincronizando modelos (alter=${alterSync ? "true" : "false"}) - use migrações para mudanças estruturais`
-    );
-    return sequelize.sync({ alter: alterSync }).catch((err) => {
-      const fkDuplicate =
-        err?.parent?.code === "ER_FK_DUP_NAME" ||
-        err?.name === "SequelizeDatabaseError";
-      if (fkDuplicate) {
-        console.warn(
-          "[sync] Detected duplicated FK constraint; skipping sync. Ajuste via migração/manual se necessário:",
-          err?.parent?.sqlMessage || err?.message
-        );
+      // mantém o schema alinhado com os models sem precisar rodar migrações manuais
+      // Evitamos alterações automáticas em produção para não criar índices duplicados (limite de 64 no MySQL)
+      const enableSync = process.env.ENABLE_DB_SYNC === "true";
+      const alterSync = process.env.ENABLE_DB_SYNC_ALTER === "true";
+      if (!enableSync) {
+        console.log("Sincronização automática desabilitada (ENABLE_DB_SYNC=false)");
         return null;
       }
-      throw err;
-    });
-  })
-  .then(async () => {
-    // garante que o usuário admin exista
-    try {
-      const adminEmail = process.env.ADMIN_EMAIL || "arqdoor@admin.com.br";
-      const adminPassword = process.env.ADMIN_PASSWORD || "6aseqcx13zerq513";
-      const existing = await User.findOne({ where: { email: adminEmail } });
-      if (!existing) {
-        const hashed = bcrypt.hashSync(adminPassword, 10);
-        await User.create({
-          name: "ArqDoor ADM",
-          email: adminEmail,
-          password: hashed,
-          birth: new Date("1990-01-01"),
-          gender: "Prefiro não dizer",
-          type: "contratante",
-          termos_aceitos: true,
-          perfil_completo: true,
-          is_email_verified: true,
-        });
-        console.log("[admin] Usuário admin criado");
-      } else {
-        console.log("[admin] Usuário admin já existe");
+      console.log(
+        `Sincronizando modelos (alter=${alterSync ? "true" : "false"}) - use migrações para mudanças estruturais`
+      );
+      return sequelize.sync({ alter: alterSync }).catch((err) => {
+        const fkDuplicate =
+          err?.parent?.code === "ER_FK_DUP_NAME" ||
+          err?.name === "SequelizeDatabaseError";
+        if (fkDuplicate) {
+          console.warn(
+            "[sync] Detected duplicated FK constraint; skipping sync. Ajuste via migração/manual se necessário:",
+            err?.parent?.sqlMessage || err?.message
+          );
+          return null;
+        }
+        throw err;
+      });
+    })
+    .then(async () => {
+      // garante que o usuário admin exista
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL || "arqdoor@admin.com.br";
+        const adminPassword = process.env.ADMIN_PASSWORD || "6aseqcx13zerq513";
+        const existing = await User.findOne({ where: { email: adminEmail } });
+        if (!existing) {
+          const hashed = bcrypt.hashSync(adminPassword, 10);
+          await User.create({
+            name: "ArqDoor ADM",
+            email: adminEmail,
+            password: hashed,
+            birth: new Date("1990-01-01"),
+            gender: "Prefiro não dizer",
+            type: "contratante",
+            termos_aceitos: true,
+            perfil_completo: true,
+            is_email_verified: true,
+          });
+          console.log("[admin] Usuário admin criado");
+        } else {
+          console.log("[admin] Usuário admin já existe");
+        }
+      } catch (e) {
+        console.warn("[admin] Falha ao garantir usuário admin:", e?.message || e);
       }
-    } catch (e) {
-      console.warn("[admin] Falha ao garantir usuário admin:", e?.message || e);
-    }
 
-    if (process.env.NODE_ENV !== 'test') {
       app.listen(PORT, () => {
         console.log("==========================================");
         console.log(`Servidor rodando na porta ${PORT}`);
@@ -227,22 +227,22 @@ sequelize
       const sslKeyPath = "src/SSL/code.key";
 
       if (fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath)) {
-      https
-        .createServer(
-          {
+        https
+          .createServer(
+            {
               cert: fs.readFileSync(sslCertPath),
               key: fs.readFileSync(sslKeyPath),
             },
             app
           )
-        .listen(8081, () => console.log("Servidor Rodando em Https (8081)"));
-    } else {
-      console.log("Certificados SSL não encontrados. Servidor HTTPS não iniciado.");
-    }
-    }
-  })
-  .catch((error) => {
-    console.error("Erro na conexão ou sincronização:", error);
-  });
+          .listen(8081, () => console.log("Servidor Rodando em Https (8081)"));
+      } else {
+        console.log("Certificados SSL não encontrados. Servidor HTTPS não iniciado.");
+      }
+    })
+    .catch((error) => {
+      console.error("Erro na conexão ou sincronização:", error);
+    });
+}
 
 module.exports = app;

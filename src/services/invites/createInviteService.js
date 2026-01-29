@@ -47,7 +47,7 @@ const createInviteService = async (data, user) => {
     const rawPreference = (data.payment_preference || provider.payment_preference || "at_end")
       .toString()
       .toLowerCase();
-    const invitePreference = ["per_step", "at_end"].includes(rawPreference)
+    const invitePreference = ["per_step", "at_end", "custom"].includes(rawPreference)
       ? rawPreference
       : "at_end";
 
