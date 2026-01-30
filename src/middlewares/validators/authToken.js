@@ -3,16 +3,19 @@ const jwt = require("jsonwebtoken");
 const authToken = async (req, res, next) => {
   try {
     // receber o token
-    if (!req.headers.authorization) {
-      return res.status(409).json({
-        code: 409,
-        message: "Acesso negado",
-        success: "false",
+    // receber o token (Header ou Cookie)
+    if (!req.headers.authorization && !req.cookies?.token) {
+      return res.status(401).json({
+        code: 401,
+        message: "Acesso negado: Token não fornecido",
+        success: false,
       });
     }
 
     const token =
-      req.headers.authorization.split(" ")[1] || req.headers.authorization;
+      req.headers.authorization?.split(" ")[1] ||
+      req.headers.authorization ||
+      req.cookies?.token;
 
 
 

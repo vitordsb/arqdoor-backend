@@ -139,12 +139,10 @@ const googleAuthService = async ({ idToken, accessToken, type, mode }) => {
     //   };
     // }
 
+    // Permite login híbrido (Google + Senha) se o email for verificado
     if (existingUser.provider === "local") {
-      return {
-        code: 403,
-        message: "Este email foi registrado manualmente. Por favor, faça login com sua senha.",
-        success: false,
-      };
+      // Opcional: Atualizar provider para indicar vínculo ou manter "local"
+      console.log(`[GoogleAuth] Usuário local ${email} autenticou via Google.`);
     }
 
     // Se o provider é NULL (usuário legado), atualizar para 'google'

@@ -6,7 +6,17 @@ const https = require("https");
 const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 8080;
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+
 app.use(express.json());
+app.use(cookieParser());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
+  })
+);
 
 app.post("/webhook/deploy", (req, res) => {
   const token = req.headers["x-deploy-token"];

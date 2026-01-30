@@ -12,12 +12,15 @@ const deleteInviteController = require("../controllers/invites/deleteInviteContr
 const uploadInvitePdfController = require("../controllers/invites/uploadInvitePdfController");
 const getInvitePublicController = require("../controllers/invites/getInvitePublicController");
 const acceptInviteController = require("../controllers/invites/acceptInviteController");
+const noCache = require("../middlewares/noCache");
 
 const router = Router();
 const uploadPdf = multer({
   storage: configMulterPdf.storage,
   fileFilter: configMulterPdf.fileFilter,
 });
+
+router.use(noCache); // Aplica no-cache para todas as rotas de convite
 
 router.get("/public/:token", getInvitePublicController);
 router.post("/public/:token/accept", authToken, acceptInviteController);

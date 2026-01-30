@@ -13,6 +13,15 @@ const getInvitePublicService = async (token) => {
       };
     }
 
+    if (invite.expires_at && new Date() > new Date(invite.expires_at)) {
+      return {
+        code: 410, // Gone
+        message: "Este convite expirou.",
+        success: false,
+        expired: true
+      };
+    }
+
     const provider = await ServiceProvider.findByPk(invite.provider_id);
     const providerUser = provider
       ? await User.findByPk(provider.user_id)

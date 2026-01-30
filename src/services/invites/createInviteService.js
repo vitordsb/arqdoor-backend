@@ -60,6 +60,7 @@ const createInviteService = async (data, user) => {
       payment_preference: invitePreference,
       steps,
       status: "draft",
+      expires_at: new Date(Date.now() + 60 * 60 * 1000), // Expira em 1 hora
     });
 
     return {

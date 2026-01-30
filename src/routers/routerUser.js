@@ -19,7 +19,13 @@ const updateUserValidation = require("../middlewares/validators/users/updateUser
 const getImagesUserController = require("../controllers/users/getImagesUserController");
 // const createUserValidator = require("../middlewares/validators/users/createUserValidator");
 
+const noCache = require("../middlewares/noCache");
+
 const router = Router();
+
+// Aplica cache-control apenas em rotas de leitura/perfil que mudam
+router.get("/:id", noCache, ValidatorID, getOneUserController);
+router.get("/", noCache, getAllUserController);
 
 /**
  * @swagger
@@ -96,7 +102,7 @@ router.post("/", createUserValidation, createUserController);
  *         description: Erro interno do servidor
  */
 
-router.get("/images/:id", getImagesUserController);
+router.get("/images/:id", noCache, getImagesUserController);
 
 /**
  * @swagger
@@ -108,7 +114,7 @@ router.get("/images/:id", getImagesUserController);
  *       200:
  *         description: Lista de usuários
  */
-router.get("/", getAllUserController);
+router.get("/", noCache, getAllUserController);
 
 /**
  * @swagger
@@ -129,7 +135,7 @@ router.get("/", getAllUserController);
  *       404:
  *         description: Usuário não encontrado
  */
-router.get("/:id", ValidatorID, getOneUserController);
+router.get("/:id", noCache, ValidatorID, getOneUserController);
 
 /**
  * @swagger

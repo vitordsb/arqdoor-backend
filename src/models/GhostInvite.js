@@ -94,6 +94,10 @@ const GhostInvite = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "GhostInvite",
