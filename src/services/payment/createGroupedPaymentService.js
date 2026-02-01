@@ -261,60 +261,90 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       };
     }
 
-    const newPayment = await Payment.create({
-      ticket_id: ticketId,
-      contractor_id: user.id,
-      provider_id: ticket.provider_id,
-      amount: totalAmount,
-      method: method,
-      status: asaasData.status,
-      asaas_payment_id: asaasData.id,
-      asaas_invoice_url: asaasData.invoiceUrl,
-      pix_payload: asaasData.pixQrCodeField,    });
+    // Modificação: Tentar criar diretamente e capturar erro de duplicidade (Race Condition Handling)
+    let newPayment;
+    try {
+      newPayment = await Payment.create({
+        ticket_id: ticketId,
+        contractor_id: user.id,
+        provider_id: ticket.provider_id,
+        amount: totalAmount,
+        method: method,
+        status: asaasData.status,
+        asaas_payment_id: asaasData.id,
+        asaas_invoice_url: asaasData.invoiceUrl,
+        pix_payload: asaasData.pixQrCodeField,
+      });
 
-    const paymentStepsData = steps.map((step) => ({
-      payment_id: newPayment.id,
-      step_id: step.id,
-    }));
+      // Se sucesso na criação, associar steps
+      const paymentStepsData = steps.map((step) => ({
+        payment_id: newPayment.id,
+        step_id: step.id,
+      }));
+      await PaymentStep.bulkCreate(paymentStepsData);
 
-    await PaymentStep.bulkCreate(paymentStepsData);
-
-    if (method === "PIX") {
-      try {
-        const qrResponse = await asaasClient.get(`/payments/${asaasData.id}/pixQrCode`);
-        newPayment.pix_payload = qrResponse.data.payload;
-        newPayment.pix_image = qrResponse.data.encodedImage;
-        await newPayment.save();
-      } catch (qrError) {
-        console.error("Erro ao buscar QR Code PIX:", qrError.message);
+      // Buscar QR Code / Boleto se necessário
+      if (method === "PIX") {
+        try {
+          const qrResponse = await asaasClient.get(`/payments/${asaasData.id}/pixQrCode`);
+          newPayment.pix_payload = qrResponse.data.payload;
+          newPayment.pix_image = qrResponse.data.encodedImage;
+          await newPayment.save();
+        } catch (qrError) {
+          console.error("Erro ao buscar QR Code PIX:", qrError.message);
+        }
+      } else if (method === "BOLETO") {
+        try {
+          const boletoResponse = await asaasClient.get(`/payments/${asaasData.id}/identificationField`);
+          newPayment.boleto_barcode = boletoResponse.data.identificationField;
+          newPayment.boleto_url = asaasData.bankSlipUrl;
+          await newPayment.save();
+        } catch (boletoError) {
+          console.error("Erro ao buscar linha digitável:", boletoError.message);
+        }
       }
-    } else if (method === "BOLETO") {
-      try {
-        const boletoResponse = await asaasClient.get(`/payments/${asaasData.id}/identificationField`);
-        newPayment.boleto_barcode = boletoResponse.data.identificationField;
-        newPayment.boleto_url = asaasData.bankSlipUrl;
-        await newPayment.save();
-      } catch (boletoError) {
-        console.error("Erro ao buscar linha digitável:", boletoError.message);
+
+    } catch (createError) {
+      // Se erro for duplicidade (ER_DUP_ENTRY ou SequelizeUniqueConstraintError), recuperar o existente
+      if (createError.name === 'SequelizeUniqueConstraintError' || createError.code === 'ER_DUP_ENTRY' || (createError.original && createError.original.code === 'ER_DUP_ENTRY')) {
+        console.warn(`[createGroupedPaymentService] Detalhe da duplicidade capturada: ${createError.message}. Recuperando registro existente...`);
+        const existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
+
+        if (existingPayment) {
+          if (existingPayment.status !== asaasData.status) {
+            await existingPayment.update({ status: asaasData.status });
+          }
+          newPayment = existingPayment;
+        } else {
+          // Se deu dup entry mas não achou, é um estado muito inconsistente, lança erro original
+          throw createError;
+        }
+      } else {
+        throw createError;
       }
     }
 
     const responseData = newPayment.toJSON();
-    responseData.pix = {
-      qr_code_image: newPayment.pix_image,
-      copy_and_paste: newPayment.pix_payload,
-      expires_at: newPayment.pix_expires_at,
-    };
-    responseData.boleto = {
-      digitable_line: newPayment.boleto_barcode,
-      pdf_url: newPayment.boleto_url,
-      due_date: newPayment.due_date,
-    };
+    // Garante que campos extras existam no retorno mesmo se recuperado (caso o create original tenha falhado em salvar payload mas salvo ID)
+    if (!responseData.pix && newPayment.pix_image) {
+      responseData.pix = {
+        qr_code_image: newPayment.pix_image,
+        copy_and_paste: newPayment.pix_payload,
+        expires_at: newPayment.pix_expires_at,
+      };
+    }
+    if (!responseData.boleto && newPayment.boleto_barcode) {
+      responseData.boleto = {
+        digitable_line: newPayment.boleto_barcode,
+        pdf_url: newPayment.boleto_url,
+        due_date: newPayment.due_date,
+      };
+    }
 
     return {
       code: 201,
       success: true,
-      message: "Cobrança agrupada gerada com sucesso.",
+      message: "Cobrança processada com sucesso.",
       data: responseData,
     };
   } catch (error) {
