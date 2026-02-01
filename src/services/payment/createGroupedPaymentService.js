@@ -227,8 +227,13 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
 
     const asaasData = asaasResponse.data;
 
+    console.log(`[createGroupedPaymentService] Asaas Payment ID received: ${asaasData.id}`);
+
     // Verificar se já existe este pagamento no banco (idempotência do Asaas com externalReference ou retries)
     const existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
+
+    console.log(`[createGroupedPaymentService] Existing payment found? ${existingPayment ? existingPayment.id : 'NO'}`);
+
     if (existingPayment) {
       // Atualiza status se necessário
       if (existingPayment.status !== asaasData.status) {
