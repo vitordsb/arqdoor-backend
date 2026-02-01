@@ -43,6 +43,10 @@ const createPaymentController = async (req, res) => {
       });
     }
 
+    if (!result.success) {
+      console.warn(`[createPaymentController] Falha ao criar pagamento: ${JSON.stringify(result)}`);
+    }
+
     return res.status(result.code).json(result);
   } catch (error) {
     console.error("[createPaymentController] Error:", error);

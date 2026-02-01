@@ -145,9 +145,21 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
         };
       }
 
-      const totalStepsInGroup = await Step.count({ where: { ticket_id: ticketId, group_id: groupId } });
+      const totalStepsInGroup = await Step.count({
+        where: {
+          ticket_id: ticketId,
+          group_id: groupId,
+          status: {
+            [Op.notIn]: ['Recusado', 'Cancelado', 'recusado', 'cancelado']
+          }
+        }
+      });
       if (steps.length !== totalStepsInGroup) {
-        return { code: 400, success: false, message: "É necessário pagar o grupo de etapas completo." };
+        return {
+          code: 400,
+          success: false,
+          message: `É necessário pagar o grupo de etapas completo. Selecionados: ${steps.length}, Total válido no grupo: ${totalStepsInGroup}`
+        };
       }
     }
 
