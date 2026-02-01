@@ -148,18 +148,39 @@ const acceptInviteService = async (token, user) => {
       };
     }
 
-    const stepPayload = steps.map((step, index) => ({
-      ticket_id: ticket.id,
-      title: step.title,
-      price: Number(step.price) || 0,
-      // For custom payment (grouped phases), auto-start first phase
-      // This allows client to pay and provider to manage the workflow
-      status: (paymentPreference === "custom" && index === 0) ? "Concluido" : "Pendente",
-      start_date: step.start_date || null,
-      end_date: step.end_date || null,
-      // Don't persist group_id - payment groups are only for invite display
-      // Actual ticket steps don't need group references
-    }));
+    // Build a map of group_id to sequence number for custom payment
+    const groupIdToSequence = new Map();
+    let sequenceCounter = 1;
+    if (paymentPreference === "custom") {
+      steps.forEach(step => {
+        const gid = step.group_id || step.payment_group_id;
+        if (gid && !groupIdToSequence.has(gid)) {
+          groupIdToSequence.set(gid, sequenceCounter++);
+        }
+      });
+    }
+
+    const stepPayload = steps.map((step, index) => {
+      const gid = step.group_id || step.payment_group_id;
+      const groupSequence = gid && groupIdToSequence.has(gid)
+        ? groupIdToSequence.get(gid)
+        : null;
+
+      return {
+        ticket_id: ticket.id,
+        title: step.title,
+        price: Number(step.price) || 0,
+        // For custom payment (grouped phases), auto-start first phase
+        // This allows client to pay and provider to manage the workflow
+        status: (paymentPreference === "custom" && index === 0) ? "Concluido" : "Pendente",
+        start_date: step.start_date || null,
+        end_date: step.end_date || null,
+        // Store group sequence for invite-created steps (no FK constraint)
+        group_sequence: groupSequence,
+        // Don't persist group_id - payment groups are only for invite display
+        // Actual ticket steps don't need group references
+      };
+    });
 
     await Step.bulkCreate(stepPayload, { transaction });
 

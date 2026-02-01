@@ -85,6 +85,12 @@ const Step = sequelize.define(
         key: "id",
       },
     },
+    // Sequence number for grouping steps from invites (no FK constraint)
+    // Used when group_id can't be used due to FK constraints
+    group_sequence: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     // Timestamp de quando o prestador iniciou efetivamente a fase
     started_at: {
       type: DataTypes.DATE,
