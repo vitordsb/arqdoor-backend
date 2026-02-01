@@ -227,6 +227,35 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
 
     const asaasData = asaasResponse.data;
 
+    // Verificar se já existe este pagamento no banco (idempotência do Asaas com externalReference ou retries)
+    const existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
+    if (existingPayment) {
+      // Atualiza status se necessário
+      if (existingPayment.status !== asaasData.status) {
+        await existingPayment.update({ status: asaasData.status });
+      }
+
+      const responseData = existingPayment.toJSON();
+      // Garante campos extras de PIX/Boleto se existirem
+      responseData.pix = {
+        qr_code_image: existingPayment.pix_image,
+        copy_and_paste: existingPayment.pix_payload,
+        expires_at: existingPayment.pix_expires_at,
+      };
+      responseData.boleto = {
+        digitable_line: existingPayment.boleto_barcode,
+        pdf_url: existingPayment.boleto_url,
+        due_date: existingPayment.due_date,
+      };
+
+      return {
+        code: 200, // OK (retornando existente)
+        success: true,
+        message: "Cobrança recuperada com sucesso.",
+        data: responseData,
+      };
+    }
+
     const newPayment = await Payment.create({
       ticket_id: ticketId,
       contractor_id: user.id,
