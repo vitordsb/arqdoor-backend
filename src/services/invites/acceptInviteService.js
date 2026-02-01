@@ -148,11 +148,13 @@ const acceptInviteService = async (token, user) => {
       };
     }
 
-    const stepPayload = steps.map((step) => ({
+    const stepPayload = steps.map((step, index) => ({
       ticket_id: ticket.id,
       title: step.title,
       price: Number(step.price) || 0,
-      status: "Pendente",
+      // For custom payment (grouped phases), auto-start first phase
+      // This allows client to pay and provider to manage the workflow
+      status: (paymentPreference === "custom" && index === 0) ? "Concluido" : "Pendente",
       start_date: step.start_date || null,
       end_date: step.end_date || null,
       // Don't persist group_id - payment groups are only for invite display
