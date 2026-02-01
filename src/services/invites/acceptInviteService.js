@@ -155,7 +155,8 @@ const acceptInviteService = async (token, user) => {
       status: "Pendente",
       start_date: step.start_date || null,
       end_date: step.end_date || null,
-      group_id: step.group_id || step.payment_group_id || null, // Persistir grupo
+      // Don't persist group_id - payment groups are only for invite display
+      // Actual ticket steps don't need group references
     }));
 
     await Step.bulkCreate(stepPayload, { transaction });
