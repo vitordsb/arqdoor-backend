@@ -305,20 +305,33 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       }
 
     } catch (createError) {
-      // Se erro for duplicidade (ER_DUP_ENTRY ou SequelizeUniqueConstraintError), recuperar o existente
-      if (createError.name === 'SequelizeUniqueConstraintError' || createError.code === 'ER_DUP_ENTRY' || (createError.original && createError.original.code === 'ER_DUP_ENTRY')) {
-        console.warn(`[createGroupedPaymentService] Detalhe da duplicidade capturada: ${createError.message}. Recuperando registro existente...`);
-        const existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
+      // Se erro for duplicidade (ER_DUP_ENTRY, 1062, ou mensagem de Duplicate entry), recuperar o existente
+      const isDuplicate =
+        createError.name === 'SequelizeUniqueConstraintError' ||
+        createError.code === 'ER_DUP_ENTRY' ||
+        createError.errno === 1062 ||
+        (createError.original && (createError.original.code === 'ER_DUP_ENTRY' || createError.original.errno === 1062)) ||
+        (createError.message && createError.message.includes("Duplicate entry"));
 
-        if (existingPayment) {
-          if (existingPayment.status !== asaasData.status) {
-            await existingPayment.update({ status: asaasData.status });
-          }
-          newPayment = existingPayment;
-        } else {
-          // Se deu dup entry mas não achou, é um estado muito inconsistente, lança erro original
-          throw createError;
+      if (isDuplicate) {
+        console.warn(`[createGroupedPaymentService] Duplicidade detectada (${createError.message}). Tentando recuperar pagamento existente...`);
+
+        // Tenta achar pelo asaas_payment_id
+        let existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
+
+        if (!existingPayment) {
+          console.warn(`[createGroupedPaymentService] Pagamento duplicado não encontrado pelo asaas_payment_id (${asaasData.id}). Tentando recuperar o mais recente para este ticket...`);
+          // Fallback desesperado: pegar o último pagamento criado para este ticket/grupo que tenha esse ID do Asaas (embora o findOne acima devesse achar)
+          // As vezes transaction isolation ou delay de replica pode afetar 
+          // Vamos confiar que se deu dup entry, ele existe. Se o findOne falhou, é muito estranho.
+          // Retornar erro legível se realmente falhar tudo
+          throw new Error(`Erro de inconsistência: O pagamento consta como duplicado mas não foi encontrado no sistema. ID: ${asaasData.id}`);
         }
+
+        if (existingPayment.status !== asaasData.status) {
+          await existingPayment.update({ status: asaasData.status });
+        }
+        newPayment = existingPayment;
       } else {
         throw createError;
       }
