@@ -3,11 +3,20 @@ const ServiceProvider = require("../../models/ServiceProvider");
 const TicketService = require("../../models/TicketService");
 const User = require("../../models/User");
 const { Op } = require("sequelize");
+const sequelize = require("../../database/config");
+
 const createTicketService = async (data, user) => {
+  const transaction = await sequelize.transaction();
   try {
-    // validar se conversation existe
-    const conversation = await Conversation.findByPk(data.conversation_id);
+    // 1. Lock the conversation to serialized attempts for this specific chat
+    // This prevents race conditions where two users click "Create" simultaneously
+    const conversation = await Conversation.findByPk(data.conversation_id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
     if (!conversation) {
+      await transaction.rollback();
       return {
         code: 404,
         message: "Conversa não encontrada",
@@ -20,6 +29,7 @@ const createTicketService = async (data, user) => {
       conversation.user1_id !== user.id &&
       conversation.user2_id !== user.id
     ) {
+      await transaction.rollback();
       return {
         code: 400,
         message: "O usuario logado não está nessa conversa",
@@ -29,7 +39,8 @@ const createTicketService = async (data, user) => {
 
     // validar se o usuario logado e realmente um provider
     if (user.type !== "prestador") {
-      console.log('createTicketService check failed. User type:', user.type); // Log for backend view
+      await transaction.rollback();
+      console.log('createTicketService check failed. User type:', user.type);
       return {
         code: 400,
         message: `Apenas usuarios prestadores podem criar um ticket de serviço. Tipo atual: ${user.type}`,
@@ -42,9 +53,11 @@ const createTicketService = async (data, user) => {
       where: {
         user_id: user.id,
       },
+      transaction,
     });
 
     if (!userProvider) {
+      await transaction.rollback();
       return {
         code: 404,
         message: "Não foi possivel encontrar o usuario provider",
@@ -54,6 +67,7 @@ const createTicketService = async (data, user) => {
 
     // validar se é uma conversa de negocios
     if (!conversation.is_negotiation) {
+      await transaction.rollback();
       return {
         code: 400,
         message: "Só é possivel criar um ticket em uma conversa de negocios",
@@ -61,31 +75,23 @@ const createTicketService = async (data, user) => {
       };
     }
 
-    // validar se já tem outro ticket criado
-    // if ((await TicketService.count()) !== 0) {
-    //   return {
-    //     code: 400,
-    //     message:
-    //       "Não vai ser possivel criar ticket, já tem um ticket em aberto",
-    //     success: false,
-    //   };
-    // }
-
-    const tickets = await TicketService.findAll({
+    // validar se já tem outro ticket criado (Active Check within Lock)
+    const existingTickets = await TicketService.findAll({
       where: {
         conversation_id: conversation.conversation_id,
         [Op.or]: [{ status: "em andamento" }, { status: "pendente" }],
       },
+      transaction,
     });
 
-    // if (tickets.length !== 0) {
-    //   console.log(tickets);
-    //   return {
-    //     code: 400,
-    //     message: "já tem um ticket em aberto ou em andamento",
-    //     success: false,
-    //   };
-    // }
+    if (existingTickets.length > 0) {
+      await transaction.rollback();
+      return {
+        code: 400,
+        message: "Já existe um ticket em aberto ou em andamento nesta conversa",
+        success: false,
+      };
+    }
 
     data.provider_id = userProvider.provider_id;
     const requestedPreference = (data.payment_preference || "")
@@ -104,7 +110,9 @@ const createTicketService = async (data, user) => {
     data.payment_status =
       paymentPreference === "at_end" ? "awaiting_deposit" : "awaiting_steps";
 
-    const ticketService = await TicketService.create(data);
+    const ticketService = await TicketService.create(data, { transaction });
+
+    await transaction.commit();
 
     return {
       code: 200,
@@ -113,6 +121,7 @@ const createTicketService = async (data, user) => {
       success: true,
     };
   } catch (error) {
+    if (transaction) await transaction.rollback();
     console.error(error);
     throw new Error(error.message);
   }

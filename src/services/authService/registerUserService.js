@@ -1,11 +1,14 @@
 const createUserService = require("../users/createUserService");
-
 const jwt = require("jsonwebtoken");
+const sequelize = require("../../database/config");
 
 const registerUserService = async (dataUser) => {
+  const transaction = await sequelize.transaction();
+
   try {
-    const user = await createUserService(dataUser);
+    const user = await createUserService(dataUser, { transaction });
     if (!user.success) {
+      await transaction.rollback();
       return user;
     }
 
@@ -25,6 +28,8 @@ const registerUserService = async (dataUser) => {
       { expiresIn: "10h" },
     );
 
+    await transaction.commit();
+
     return {
       code: 201,
       data: {
@@ -35,6 +40,7 @@ const registerUserService = async (dataUser) => {
       success: true,
     };
   } catch (error) {
+    if (transaction) await transaction.rollback();
     console.error(error);
     throw new Error(error.message);
   }

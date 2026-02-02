@@ -4,15 +4,18 @@ const bycrypt = require("bcryptjs");
 const sequelize = require("../../database/config");
 const ServiceProvider = require("../../models/ServiceProvider");
 
-const createUserService = async (dataUser) => {
-  const t = await sequelize.transaction();
+const createUserService = async (dataUser, options = {}) => {
+  const t = options.transaction || await sequelize.transaction();
+  const isExternalTransaction = !!options.transaction;
 
   try {
     // validar email
     const existsEmail = await User.findOne({
       where: { email: dataUser.email },
+      transaction: t,
     });
     if (existsEmail) {
+      if (!isExternalTransaction) await t.rollback();
       return {
         code: 409,
         error: {
@@ -32,8 +35,10 @@ const createUserService = async (dataUser) => {
     if (dataUser.cpf) {
       const existsCpf = await User.findOne({
         where: { cpf: dataUser.cpf },
+        transaction: t,
       });
       if (existsCpf) {
+        if (!isExternalTransaction) await t.rollback();
         return {
           code: 409,
           error: {
@@ -54,8 +59,10 @@ const createUserService = async (dataUser) => {
     if (dataUser.cnpj) {
       const existsCnpj = await User.findOne({
         where: { cnpj: dataUser.cnpj },
+        transaction: t,
       });
       if (existsCnpj) {
+        if (!isExternalTransaction) await t.rollback();
         return {
           code: 409,
           error: {
@@ -99,7 +106,7 @@ const createUserService = async (dataUser) => {
       );
     }
 
-    await t.commit();
+    if (!isExternalTransaction) await t.commit();
     return {
       code: 201,
       user,
@@ -107,7 +114,7 @@ const createUserService = async (dataUser) => {
       success: true,
     };
   } catch (error) {
-    await t.rollback();
+    if (!isExternalTransaction) await t.rollback();
     console.error(error);
     throw new Error(error.message);
   }

@@ -308,18 +308,9 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       // Bulletproof: Se der qualquer erro, primeira coisa que tentamos é ver se o pagamento foi criado na "surdina" por race condition.
       // Apenas se não acharmos o pagamento é que assumimos que foi erro real de criação.
 
-      console.warn(`[createGroupedPaymentService] Erro ao criar pagamento (${createError.message}). Verificando se foi criado por concorrência... ID esperado: ${asaasData.id}`);
+      console.warn(`[createGroupedPaymentService] Erro ao criar pagamento (${createError.message}). Verificando se foi criado por concorrência...`);
 
-      // Adicionando log da query para debug extremo
-      const existingPayment = await Payment.findOne({
-        where: { asaas_payment_id: asaasData.id },
-        logging: (sql, queryObject) => {
-          console.log(`[createGroupedPaymentService] Executing findOne SQL: ${sql}`);
-          console.log(`[createGroupedPaymentService] Bind parameters: ${JSON.stringify(queryObject.bind)}`);
-        }
-      });
-
-      console.log(`[createGroupedPaymentService] Resultado do findOne: ${existingPayment ? existingPayment.id : 'NULL/UNDEFINED'}`);
+      const existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
 
       if (existingPayment) {
         console.warn(`[createGroupedPaymentService] Pagamento existente encontrado! Recuperando...`);
@@ -329,8 +320,11 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
         newPayment = existingPayment;
       } else {
         // Se realmente não existe, então o erro foi real e fatal (não duplicidade)
-        console.error(`[createGroupedPaymentService] Erro real. Pagamento ID ${asaasData.id} não encontrado no banco após erro de criação.`);
-        console.error(`[createGroupedPaymentService] Stack do erro original: ${createError.stack}`);
+        console.error(`[createGroupedPaymentService] Erro real, pagamento não encontrado. Re-throwing.`);
+        // Tentar logar detalhes completos do erro original
+        if (createError.original) {
+          console.error('[createGroupedPaymentService] DB Error details:', JSON.stringify(createError.original));
+        }
         throw createError;
       }
     }
