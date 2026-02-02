@@ -305,34 +305,32 @@ const createGroupedPaymentService = async (stepIds, user, options = {}) => {
       }
 
     } catch (createError) {
-      // Se erro for duplicidade (ER_DUP_ENTRY, 1062, ou mensagem de Duplicate entry), recuperar o existente
-      const isDuplicate =
-        createError.name === 'SequelizeUniqueConstraintError' ||
-        createError.code === 'ER_DUP_ENTRY' ||
-        createError.errno === 1062 ||
-        (createError.original && (createError.original.code === 'ER_DUP_ENTRY' || createError.original.errno === 1062)) ||
-        (createError.message && createError.message.includes("Duplicate entry"));
+      // Bulletproof: Se der qualquer erro, primeira coisa que tentamos é ver se o pagamento foi criado na "surdina" por race condition.
+      // Apenas se não acharmos o pagamento é que assumimos que foi erro real de criação.
 
-      if (isDuplicate) {
-        console.warn(`[createGroupedPaymentService] Duplicidade detectada (${createError.message}). Tentando recuperar pagamento existente...`);
+      console.warn(`[createGroupedPaymentService] Erro ao criar pagamento (${createError.message}). Verificando se foi criado por concorrência... ID esperado: ${asaasData.id}`);
 
-        // Tenta achar pelo asaas_payment_id
-        let existingPayment = await Payment.findOne({ where: { asaas_payment_id: asaasData.id } });
-
-        if (!existingPayment) {
-          console.warn(`[createGroupedPaymentService] Pagamento duplicado não encontrado pelo asaas_payment_id (${asaasData.id}). Tentando recuperar o mais recente para este ticket...`);
-          // Fallback desesperado: pegar o último pagamento criado para este ticket/grupo que tenha esse ID do Asaas (embora o findOne acima devesse achar)
-          // As vezes transaction isolation ou delay de replica pode afetar 
-          // Vamos confiar que se deu dup entry, ele existe. Se o findOne falhou, é muito estranho.
-          // Retornar erro legível se realmente falhar tudo
-          throw new Error(`Erro de inconsistência: O pagamento consta como duplicado mas não foi encontrado no sistema. ID: ${asaasData.id}`);
+      // Adicionando log da query para debug extremo
+      const existingPayment = await Payment.findOne({
+        where: { asaas_payment_id: asaasData.id },
+        logging: (sql, queryObject) => {
+          console.log(`[createGroupedPaymentService] Executing findOne SQL: ${sql}`);
+          console.log(`[createGroupedPaymentService] Bind parameters: ${JSON.stringify(queryObject.bind)}`);
         }
+      });
 
+      console.log(`[createGroupedPaymentService] Resultado do findOne: ${existingPayment ? existingPayment.id : 'NULL/UNDEFINED'}`);
+
+      if (existingPayment) {
+        console.warn(`[createGroupedPaymentService] Pagamento existente encontrado! Recuperando...`);
         if (existingPayment.status !== asaasData.status) {
           await existingPayment.update({ status: asaasData.status });
         }
         newPayment = existingPayment;
       } else {
+        // Se realmente não existe, então o erro foi real e fatal (não duplicidade)
+        console.error(`[createGroupedPaymentService] Erro real. Pagamento ID ${asaasData.id} não encontrado no banco após erro de criação.`);
+        console.error(`[createGroupedPaymentService] Stack do erro original: ${createError.stack}`);
         throw createError;
       }
     }
