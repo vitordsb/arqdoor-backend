@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 const path = require("path");
+const fs = require("fs");
 const dotenv = require("dotenv");
 const mysql = require("mysql2/promise");
 
-dotenv.config({ path: path.resolve(__dirname, "..", ".env.test") });
+const envTestPath = path.resolve(__dirname, "..", ".env.test");
+const envExamplePath = path.resolve(__dirname, "..", ".env.test.example");
+const envPath = fs.existsSync(envTestPath) ? envTestPath : envExamplePath;
+
+dotenv.config({ path: envPath });
 
 const host = process.env.DB_HOST || "127.0.0.1";
 const port = Number(process.env.DB_PORT || 3306);
@@ -14,7 +19,7 @@ const database = process.env.DB_NAME || "arqdoor_test";
 
 if (!user || !password) {
   console.error(
-    "Missing DB_USER/DB_PASSWORD in .env.test. Copy .env.test.example to .env.test and adjust values."
+    `Missing DB_USER/DB_PASSWORD in ${path.basename(envPath)}. Copy .env.test.example to .env.test and adjust values.`
   );
   process.exit(1);
 }
@@ -52,4 +57,3 @@ function sleep(ms) {
   if (lastErr) console.error(lastErr);
   process.exit(1);
 })();
-

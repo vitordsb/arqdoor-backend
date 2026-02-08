@@ -15,7 +15,7 @@
     "patch:providers": "node scripts/ensureProviderColumns.js",
     "patch:steps": "node scripts/ensureStepColumns.js",
     "seed:mock-users": "node scripts/seedMockUsers.js",
-    "test": "cross-env NODE_ENV=test jest",
+    "test": "npm run test:local",
     "test:db:up": "node scripts/dockerCompose.js -f docker-compose.test.yml up -d",
     "test:db:down": "node scripts/dockerCompose.js -f docker-compose.test.yml down -v",
     "test:local": "npm run test:db:up && node scripts/waitMysql.js && cross-env NODE_ENV=test jest"

@@ -1,10 +1,20 @@
 const path = require("path");
+const fs = require("fs");
 const dotenv = require("dotenv");
 
 // Ensure test env is loaded before Sequelize is instantiated (database/config reads process.env on import).
-dotenv.config({
-  path: path.resolve(__dirname, "..", "..", process.env.NODE_ENV === "test" ? ".env.test" : ".env"),
-});
+const envTestPath = path.resolve(__dirname, "..", "..", ".env.test");
+const envExamplePath = path.resolve(__dirname, "..", "..", ".env.test.example");
+const envDefaultPath = path.resolve(__dirname, "..", "..", ".env");
+
+const envPath =
+  process.env.NODE_ENV === "test"
+    ? fs.existsSync(envTestPath)
+      ? envTestPath
+      : envExamplePath
+    : envDefaultPath;
+
+dotenv.config({ path: envPath });
 const sequelize = require('../database/config');
 const associations = require('../models/associations'); // Ensure models are loaded
 
