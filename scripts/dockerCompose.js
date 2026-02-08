@@ -48,12 +48,26 @@ const wantsSudo = rawArgs.includes("--sudo");
 const args = rawArgs.filter((a) => a !== "--sudo");
 
 const base = [resolved.cmd, ...resolved.baseArgs, ...args];
-const r = wantsSudo ? run("sudo", base) : run(resolved.cmd, [...resolved.baseArgs, ...args]);
+if (wantsSudo) {
+  // Run interactively so the user can type the sudo password when prompted.
+  const rSudo = spawnSync("sudo", base, { stdio: "inherit" });
+  process.exit(rSudo.status ?? 1);
+}
+
+const r = run(resolved.cmd, [...resolved.baseArgs, ...args]);
 if (r.status === 0) process.exit(0);
 
 const combined = `${r.stdout || ""}\n${r.stderr || ""}`;
 if (isDockerPermissionError(combined)) {
   console.error("\nDocker permission error detected.\n");
+
+  // If the user is running in an interactive terminal, auto-retry with sudo.
+  if (process.stdin.isTTY) {
+    console.error("Re-running with sudo (you may be prompted for your password)...");
+    const rSudo = spawnSync("sudo", base, { stdio: "inherit" });
+    process.exit(rSudo.status ?? 1);
+  }
+
   console.error("Fix options:");
   console.error("1) Recommended: add your user to the docker group and re-login:");
   console.error("   sudo usermod -aG docker $USER");
