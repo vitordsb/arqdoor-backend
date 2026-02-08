@@ -19,6 +19,7 @@ const routerAdmin = require("./routerAdmin");
 const ticketRoutes = require("./routerTicket");
 const routerInvites = require("./routerInvites");
 const routerPaymentGroup = require("./routerPaymentGroup");
+const routerAdditionalPayment = require("./routerAdditionalPayment"); // [NEW]
 const authToken = require("../middlewares/validators/authToken");
 const stepIdParamValidator = require("../middlewares/validators/payment/stepIdParamValidator");
 const confirmStepPaymentController = require("../controllers/step/confirmStepPaymentController");
@@ -42,6 +43,7 @@ router.use("/admin", routerAdmin);
 router.use("/invites", routerInvites);
 router.use("/tickets", ticketRoutes);
 router.use("/payment-groups", routerPaymentGroup);
+router.use("/additional-payments", routerAdditionalPayment); // [NEW]
 
 router.post(
   "/steps/:stepId/confirm-payment",

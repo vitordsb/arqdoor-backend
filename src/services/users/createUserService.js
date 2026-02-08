@@ -3,6 +3,7 @@ const bycrypt = require("bcryptjs");
 // const CreateProviderService = require("../providerService/CreateProviderService");
 const sequelize = require("../../database/config");
 const ServiceProvider = require("../../models/ServiceProvider");
+const consultarCNPJ = require("../utils/cnpjService");
 
 const createUserService = async (dataUser, options = {}) => {
   const t = options.transaction || await sequelize.transaction();
@@ -57,6 +58,7 @@ const createUserService = async (dataUser, options = {}) => {
 
     // Se tiver cnpj, validar o cnpj
     if (dataUser.cnpj) {
+      // 1. Verificar unicidade no banco local
       const existsCnpj = await User.findOne({
         where: { cnpj: dataUser.cnpj },
         transaction: t,
@@ -75,6 +77,44 @@ const createUserService = async (dataUser, options = {}) => {
           },
           message: "Erro ao validar usuario",
           success: false,
+        };
+      }
+
+      // 2. Validar na Receita Federal via BrasilAPI
+      try {
+        const dadosCnpj = await consultarCNPJ(dataUser.cnpj);
+
+        // Verificar se está ATIVA
+        if (dadosCnpj.descricao_situacao_cadastral !== 'ATIVA') {
+          if (!isExternalTransaction) await t.rollback();
+          return {
+            code: 400,
+            error: {
+              details: [{
+                field: "cnpj",
+                message: `CNPJ com situação cadastral ${dadosCnpj.descricao_situacao_cadastral}. Apenas empresas ATIVAS podem se cadastrar.`
+              }]
+            },
+            message: "CNPJ inválido ou inativo",
+            success: false
+          };
+        }
+
+        // Feature futura: Preencher dados automaticamente se necessário
+        // dataUser.name = dataUser.name || dadosCnpj.razao_social;
+
+      } catch (apiError) {
+        if (!isExternalTransaction) await t.rollback();
+        return {
+          code: 400, // Bad Request pois o CNPJ é inválido
+          error: {
+            details: [{
+              field: "cnpj",
+              message: apiError.message
+            }]
+          },
+          message: "Erro na validação do CNPJ",
+          success: false
         };
       }
     }
