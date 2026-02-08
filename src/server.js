@@ -148,7 +148,6 @@ const funcValidENV = async () => {
     process.exit(1);
   }
 };
-funcValidENV();
 
 // [TEMP] Endpoint to fix DB schema issues remotely
 app.get("/fix-db", async (req, res) => {
@@ -170,8 +169,8 @@ app.get("/fix-db", async (req, res) => {
 });
 
 if (require.main === module) {
-  sequelize
-    .authenticate()
+  funcValidENV()
+    .then(() => sequelize.authenticate())
     .then(() => {
       console.log("Conexão com o banco estabelecida");
 
@@ -257,5 +256,7 @@ if (require.main === module) {
       console.error("Erro na conexão ou sincronização:", error);
     });
 }
+
+module.exports = app;
 
 module.exports = app;

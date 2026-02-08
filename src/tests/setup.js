@@ -1,4 +1,10 @@
-require('dotenv').config();
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Ensure test env is loaded before Sequelize is instantiated (database/config reads process.env on import).
+dotenv.config({
+  path: path.resolve(__dirname, "..", "..", process.env.NODE_ENV === "test" ? ".env.test" : ".env"),
+});
 const sequelize = require('../database/config');
 const associations = require('../models/associations'); // Ensure models are loaded
 
@@ -21,5 +27,5 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // await sequelize.close(); // Let Jest forceExit handle it to avoid timeouts
+  await sequelize.close();
 });

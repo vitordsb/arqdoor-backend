@@ -1,0 +1,23 @@
+services:
+  mysql_test:
+    image: mysql:8.0
+    container_name: arqdoor-mysql-test-local
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: arqdoor_test
+      MYSQL_USER: arqdoor_test
+      MYSQL_PASSWORD: arqdoor_test
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - arqdoor_mysql_test_data:/var/lib/mysql
+
+volumes:
+  arqdoor_mysql_test_data:
+
