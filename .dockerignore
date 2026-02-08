@@ -1,0 +1,27 @@
+# Keep Docker build context small and avoid baking secrets/user files into images.
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.git
+.gitignore
+.vscode
+
+.env
+.env.*
+
+uploads
+uploads/**
+
+logs
+logs/**
+*.log
+
+coverage
+coverage/**
+
+*.tar
+*.tar.gz
+*.tgz
+
