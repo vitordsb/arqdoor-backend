@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
+const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
@@ -15,12 +16,10 @@ function run(cmd, args, opts = {}) {
   return r.status ?? 1;
 }
 
-function tryResolveJestBin() {
-  try {
-    return require.resolve("jest/bin/jest.js", { paths: [rootDir] });
-  } catch {
-    return null;
-  }
+function tryFindJestBinPath() {
+  // Jest v30+ uses package "exports", so require.resolve("jest/bin/jest.js") can fail even when the file exists.
+  const jestBin = path.join(rootDir, "node_modules", "jest", "bin", "jest.js");
+  return fs.existsSync(jestBin) ? jestBin : null;
 }
 
 let exitCode = 0;
@@ -34,7 +33,7 @@ try {
   }
 
   if (exitCode === 0) {
-    const jestBin = tryResolveJestBin();
+    const jestBin = tryFindJestBinPath();
     if (!jestBin) {
       console.error('Jest not found. Install devDependencies (e.g. run "npm ci --include=dev").');
       exitCode = 1;
