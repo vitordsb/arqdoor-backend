@@ -26,27 +26,36 @@ function tryResolveJestBin() {
 let exitCode = 0;
 try {
   exitCode = run("node", ["scripts/dockerCompose.js", "-f", "docker-compose.test.yml", "up", "-d"]);
-  if (exitCode !== 0) process.exit(exitCode);
 
-  exitCode = run("node", ["scripts/waitMysql.js"], {
-    env: { ...process.env, NODE_ENV: "test" },
-  });
-  if (exitCode !== 0) process.exit(exitCode);
-
-  const jestBin = tryResolveJestBin();
-  if (!jestBin) {
-    console.error('Jest not found. Run "npm ci" first.');
-    process.exit(1);
+  if (exitCode === 0) {
+    exitCode = run("node", ["scripts/waitMysql.js"], {
+      env: { ...process.env, NODE_ENV: "test" },
+    });
   }
 
-  exitCode = run(process.execPath, [jestBin], {
-    env: { ...process.env, NODE_ENV: "test" },
-  });
+  if (exitCode === 0) {
+    const jestBin = tryResolveJestBin();
+    if (!jestBin) {
+      console.error('Jest not found. Install devDependencies (e.g. run "npm ci --include=dev").');
+      exitCode = 1;
+    } else {
+      exitCode = run(process.execPath, [jestBin], {
+        env: { ...process.env, NODE_ENV: "test" },
+      });
+    }
+  }
+} catch (err) {
+  if (exitCode === 0) exitCode = 1;
+  console.error(err && err.stack ? err.stack : String(err));
 } finally {
   // Always tear down the test DB so it doesn't linger (and remove volumes for a clean run).
-  const downExit = run("node", ["scripts/dockerCompose.js", "-f", "docker-compose.test.yml", "down", "-v"]);
-  if (exitCode === 0 && downExit !== 0) exitCode = downExit;
+  try {
+    const downExit = run("node", ["scripts/dockerCompose.js", "-f", "docker-compose.test.yml", "down", "-v"]);
+    if (exitCode === 0 && downExit !== 0) exitCode = downExit;
+  } catch (err) {
+    if (exitCode === 0) exitCode = 1;
+    console.error(err && err.stack ? err.stack : String(err));
+  }
 }
 
 process.exit(exitCode);
-
